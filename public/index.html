@@ -1,5 +1,83 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head><meta charset="UTF-8"><title>Local Story Generator</title></head>
-<body><p>Server is running. UI coming in a later task.</p></body>
+<head>
+<meta charset="UTF-8">
+<title>Local Story Generator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><h1>Local Story Generator</h1></header>
+
+<section id="view-home">
+  <button id="btn-new-story">+ Tạo truyện mới</button>
+  <table id="story-table">
+    <thead><tr><th>Tên</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
+    <tbody id="story-table-body"></tbody>
+  </table>
+</section>
+
+<section id="view-create" hidden>
+  <button class="btn-back" data-target="view-home">&larr; Quay lại</button>
+  <h2>Tạo truyện mới</h2>
+  <form id="create-form">
+    <label>Tên truyện <input type="text" id="field-name" required></label>
+
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="paste">Dán text</button>
+      <button type="button" class="tab-btn" data-tab="file">Chọn file có sẵn</button>
+    </div>
+    <div id="tab-paste" class="tab-panel">
+      <label>Ý tưởng (bỏ trống nếu truyện đã có Story Bible và bạn chỉ muốn tiếp tục) <textarea id="field-idea" rows="8"></textarea></label>
+    </div>
+    <div id="tab-file" class="tab-panel" hidden>
+      <label>File có sẵn <select id="field-idea-file"></select></label>
+    </div>
+
+    <fieldset>
+      <legend>Cấu hình (để trống = mặc định)</legend>
+      <label>Số chương <input type="number" id="field-chapters" min="1"></label>
+      <label>Số cảnh/chương <input type="number" id="field-scenes" min="1"></label>
+      <label>Thời lượng (phút) <input type="number" id="field-duration" min="1"></label>
+      <label>Model Ollama <input type="text" id="field-model"></label>
+    </fieldset>
+
+    <p id="create-error" class="error" hidden></p>
+    <button type="submit" id="btn-start">Bắt đầu</button>
+  </form>
+</section>
+
+<section id="view-run" hidden>
+  <button class="btn-back" data-target="view-home">&larr; Quay lại</button>
+  <h2 id="run-title"></h2>
+
+  <div id="run-progress">
+    <div class="progress-bar"><div id="run-progress-fill" class="progress-fill"></div></div>
+    <p id="run-status-text"></p>
+  </div>
+
+  <button id="btn-stop" hidden>Dừng</button>
+
+  <pre id="run-log"></pre>
+
+  <div id="run-result" hidden>
+    <button id="btn-view-story">Xem truyện</button>
+    <button id="btn-run-tts">Chạy TTS</button>
+  </div>
+
+  <div id="story-viewer" hidden>
+    <h3>Nội dung truyện</h3>
+    <pre id="story-text"></pre>
+  </div>
+
+  <div id="tts-panel" hidden>
+    <h3>Text-to-Speech</h3>
+    <div class="progress-bar"><div id="tts-progress-fill" class="progress-fill"></div></div>
+    <p id="tts-status-text"></p>
+    <pre id="tts-log"></pre>
+    <div id="tts-audio-list"></div>
+  </div>
+</section>
+
+<script src="app.js"></script>
+</body>
 </html>
