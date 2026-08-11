@@ -70,10 +70,12 @@ async function loadHome() {
     const actionLabel = story.isRunning ? "Xem tiến trình" : (story.hasFinalStory ? "Xem" : "Tiếp tục");
 
     tr.innerHTML = `
-      <td>${story.name}</td>
+      <td></td>
       <td>${statusText}</td>
-      <td><button data-name="${story.name}" data-resume="${!story.isRunning && !story.hasFinalStory}">${actionLabel}</button></td>
+      <td><button data-resume="${!story.isRunning && !story.hasFinalStory}">${actionLabel}</button></td>
     `;
+    tr.querySelector("td").textContent = story.name;
+    tr.querySelector("button").dataset.name = story.name;
     body.appendChild(tr);
   }
 
