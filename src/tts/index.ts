@@ -1,27 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { config } from "../config.js";
 import { cleanGeneratedStory } from "../utils.js";
-
-const story = path.resolve(process.argv[2] ?? "");
-if (!story) throw Error("Usage: npm run tts -- .\\output\\idea");
-
-const pythonCommand = config.tts.pythonCommand;
-const voice = config.tts.voice;
-
-// Voice cloning sample.
-// Default: <project-root>/voices/minhthu.mp3
-const refAudio = path.resolve(
-  process.env.TTS_REF_AUDIO ?? "voices/minhthu.mp3"
-);
-
-// Optional transcript of the reference audio.
-// Recommended for better voice cloning quality.
-const refText = process.env.TTS_REF_TEXT ?? "";
-
-const ttsDir = path.join(story, "tts");
-const manifest = path.join(ttsDir, "manifest.json");
+import type { TtsProgressEvent } from "../types.js";
 
 async function exists(file: string) {
   try { await fs.access(file); return true; } catch { return false; }
@@ -55,7 +38,7 @@ function splitText(text: string, maxChars = 450) {
     }
 
     const sentences =
-      paragraph.match(/[^.!?…]+[.!?…]+(?:["”»']+)?|[^.!?…]+$/g) ??
+      paragraph.match(/[^.!?…]+[.!?…]+(?:[""»']+)?|[^.!?…]+$/g) ??
       [paragraph];
 
     let current = "";
@@ -78,16 +61,18 @@ function splitText(text: string, maxChars = 450) {
   return result;
 }
 
-async function createManifest() {
+async function createManifest(storyDir: string) {
+  const ttsDir = path.join(storyDir, "tts");
+  const manifestPath = path.join(ttsDir, "manifest.json");
   await fs.mkdir(ttsDir, { recursive: true });
 
-  const finalStory = path.join(story, "final_story.txt");
+  const finalStory = path.join(storyDir, "final_story.txt");
   let source = "";
 
   if (await exists(finalStory)) {
     source = await fs.readFile(finalStory, "utf8");
   } else {
-    const files = (await fs.readdir(story))
+    const files = (await fs.readdir(storyDir))
       .filter(x => /^chapter-\d+\.txt$/i.test(x))
       .sort(
         (a, b) =>
@@ -96,14 +81,12 @@ async function createManifest() {
       );
 
     if (!files.length) {
-      throw Error(
-        `No final_story.txt or chapter-*.txt found in ${story}`
-      );
+      throw Error(`No final_story.txt or chapter-*.txt found in ${storyDir}`);
     }
 
     source = (
       await Promise.all(
-        files.map(f => fs.readFile(path.join(story, f), "utf8"))
+        files.map(f => fs.readFile(path.join(storyDir, f), "utf8"))
       )
     ).join("\n\n");
   }
@@ -114,22 +97,36 @@ async function createManifest() {
   const segments = splitText(cleaned).map((text, i) => ({
     id: i + 1,
     text,
-    output: path.join(
-      "audio",
-      `${String(i + 1).padStart(4, "0")}.wav`
-    )
+    output: path.join("audio", `${String(i + 1).padStart(4, "0")}.wav`)
   }));
 
+  return { manifestPath, ttsDir, segments };
+}
+
+export interface TTSOptions {
+  pythonCommand: string;
+  voice: string;
+  refAudio: string;
+  refText?: string;
+}
+
+export async function runTTS(
+  storyDir: string,
+  opts: TTSOptions,
+  onProgress?: (e: TtsProgressEvent) => void
+) {
+  const { manifestPath, ttsDir, segments } = await createManifest(storyDir);
+
   await fs.writeFile(
-    manifest,
+    manifestPath,
     JSON.stringify(
       {
         version: 2,
         engine: "VieNeu-TTS",
         mode: "voice-cloning",
-        voice,
-        refAudio,
-        refText,
+        voice: opts.voice,
+        refAudio: opts.refAudio,
+        refText: opts.refText ?? "",
         segmentCount: segments.length,
         segments
       },
@@ -139,21 +136,18 @@ async function createManifest() {
     "utf8"
   );
 
-  console.log(`Created manifest: ${manifest}`);
-  console.log(`Voice sample: ${refAudio}`);
+  console.log(`Created manifest: ${manifestPath}`);
+  console.log(`Voice sample: ${opts.refAudio}`);
   console.log(`Prepared ${segments.length} segments.`);
-}
 
-async function runWorker() {
   const worker = path.resolve("src/tts/worker.py");
-
   if (!(await exists(worker))) {
     throw Error(`Worker not found: ${worker}`);
   }
 
-  if (!(await exists(refAudio))) {
+  if (!(await exists(opts.refAudio))) {
     throw Error(
-      `Voice sample not found: ${refAudio}\n` +
+      `Voice sample not found: ${opts.refAudio}\n` +
       `Put your sample at voices/minhthu.mp3 or set TTS_REF_AUDIO.`
     );
   }
@@ -161,18 +155,40 @@ async function runWorker() {
   await new Promise<void>((resolve, reject) => {
     const args = [
       worker,
-      "--manifest", manifest,
-      "--voice", voice,
-      "--ref-audio", refAudio
+      "--manifest", manifestPath,
+      "--voice", opts.voice,
+      "--ref-audio", opts.refAudio
     ];
 
-    if (refText.trim()) {
-      args.push("--ref-text", refText);
+    if (opts.refText?.trim()) {
+      args.push("--ref-text", opts.refText);
     }
 
-    const p = spawn(pythonCommand, args, {
-      stdio: "inherit"
+    const p = spawn(opts.pythonCommand, args, {
+      stdio: ["ignore", "pipe", "pipe"]
     });
+
+    let buffer = "";
+    p.stdout.on("data", chunk => {
+      process.stdout.write(chunk);
+      buffer += chunk.toString();
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const match = line.match(/^\[(\d+)\/(\d+)\]\s+(SKIP|TTS)\s+(.*)$/);
+        if (match && onProgress) {
+          onProgress({
+            type: "segment",
+            index: Number(match[1]),
+            total: Number(match[2]),
+            text: match[4],
+            skipped: match[3] === "SKIP"
+          });
+        }
+      }
+    });
+
+    p.stderr.on("data", chunk => process.stderr.write(chunk));
 
     p.on("error", reject);
     p.on("exit", code =>
@@ -181,9 +197,28 @@ async function runWorker() {
         : reject(Error(`TTS worker exited with code ${code}`))
     );
   });
+
+  onProgress?.({ type: "complete" });
+  console.log(`TTS completed: ${ttsDir}`);
 }
 
-await createManifest();
-await runWorker();
+async function main() {
+  const story = path.resolve(process.argv[2] ?? "");
+  if (!story) throw Error("Usage: npm run tts -- .\\output\\idea");
 
-console.log(`TTS completed: ${ttsDir}`);
+  const refAudio = path.resolve(
+    process.env.TTS_REF_AUDIO ?? "voices/minhthu.mp3"
+  );
+  const refText = process.env.TTS_REF_TEXT ?? "";
+
+  await runTTS(story, {
+    pythonCommand: config.tts.pythonCommand,
+    voice: config.tts.voice,
+    refAudio,
+    refText
+  });
+}
+
+if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
+  main();
+}
