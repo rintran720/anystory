@@ -74,13 +74,15 @@ app.get("/api/stories", async (req, res) => {
       const hasAudio = (await exists(audioDir)) &&
         (await fs.readdir(audioDir)).some(f => f.endsWith(".wav"));
 
+      const job = generateJob as GenerateJob | null;
+      const isRunning = job !== null && job.name === e.name && job.status === "running";
       return {
         name: e.name,
         totalChapters,
         completedChapters,
         hasFinalStory,
         hasAudio,
-        isRunning: generateJob?.name === e.name && generateJob.status === "running"
+        isRunning
       };
     })
   );
