@@ -204,6 +204,75 @@ app.get("/api/generate/stream", (req, res) => {
   req.on("close", () => progressEmitter.off("generate", onEvent));
 });
 
+app.post("/api/tts/:name", async (req, res) => {
+  const name = req.params.name;
+  if (ttsJob && ttsJob.status === "running") {
+    return res.status(409).json({ error: `A TTS job is already running: ${ttsJob.name}` });
+  }
+
+  const job: TTSJob = { name, status: "running", events: [] };
+  ttsJob = job;
+
+  const dir = path.resolve("output", name);
+  if (!(await exists(dir))) {
+    ttsJob = null;
+    return res.status(404).json({ error: "story not found" });
+  }
+
+  const refAudio = path.resolve(process.env.TTS_REF_AUDIO ?? "voices/minhthu.mp3");
+  if (!(await exists(refAudio))) {
+    ttsJob = null;
+    return res.status(400).json({ error: `Voice sample not found: ${refAudio}` });
+  }
+
+  const pushEvent = (e: TtsProgressEvent) => {
+    job.events.push(e);
+    ttsEmitter.emit("tts", e);
+  };
+
+  (async () => {
+    try {
+      await runTTS(
+        dir,
+        {
+          pythonCommand: config.tts.pythonCommand,
+          voice: config.tts.voice,
+          refAudio,
+          refText: process.env.TTS_REF_TEXT ?? ""
+        },
+        pushEvent
+      );
+      job.status = "done";
+    } catch (err: any) {
+      job.status = "error";
+      job.error = String(err?.message ?? err);
+      pushEvent({ type: "error", message: job.error });
+    }
+  })();
+
+  res.json({ started: true, name });
+});
+
+app.get("/api/tts/:name/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  if (!ttsJob || ttsJob.name !== req.params.name) {
+    res.write(`data: ${JSON.stringify({ type: "idle" })}\n\n`);
+    return res.end();
+  }
+
+  for (const e of ttsJob.events) {
+    res.write(`data: ${JSON.stringify(e)}\n\n`);
+  }
+
+  const onEvent = (e: TtsProgressEvent) => res.write(`data: ${JSON.stringify(e)}\n\n`);
+  ttsEmitter.on("tts", onEvent);
+  req.on("close", () => ttsEmitter.off("tts", onEvent));
+});
+
 const PORT = Number(process.env.PORT ?? 4000);
 app.listen(PORT, () => {
   console.log(`Story Generator UI: http://localhost:${PORT}`);
