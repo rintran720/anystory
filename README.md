@@ -4,6 +4,8 @@
 
 `npm run dev -- .\stories\example\idea.txt`
 
+`npm start` — chạy giao diện web tại http://localhost:4000 (đổi cổng bằng biến môi trường `PORT`) để nhập idea, xem tiến trình sinh truyện theo thời gian thực, xem truyện đã xong, và chạy TTS — không cần dùng CLI.
+
 Critical tasks retry tối đa 3 lần:
 - Story Bible
 - Outline
