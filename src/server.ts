@@ -5,7 +5,9 @@ import { EventEmitter } from "node:events";
 import { exists } from "./utils.js";
 import { generateStory } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
+import { config } from "./config.js";
 import type { ProgressEvent, TtsProgressEvent } from "./types.js";
+import type { Config } from "./types.js";
 
 const app = express();
 app.use(express.json());
@@ -103,6 +105,100 @@ app.get("/api/stories/:name", async (req, res) => {
     : [];
 
   res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles });
+});
+
+app.post("/api/generate", async (req, res) => {
+  const { name, idea, ideaFile, chapters, scenesPerChapter, durationMinutes, model } = req.body ?? {};
+
+  if (!name || typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "name is required" });
+  }
+  if (generateJob && generateJob.status === "running") {
+    return res.status(409).json({ error: `A generate job is already running: ${generateJob.name}` });
+  }
+
+  const outDir = path.resolve("output", name.trim());
+  const bibleExists = await exists(path.join(outDir, "story_bible.json"));
+
+  let ideaText = "";
+  if (idea && String(idea).trim()) {
+    ideaText = String(idea).trim();
+  } else if (ideaFile) {
+    const storiesRoot = path.resolve("stories");
+    const ideaPath = path.resolve(storiesRoot, String(ideaFile));
+    if (!ideaPath.startsWith(storiesRoot)) {
+      return res.status(400).json({ error: "invalid ideaFile path" });
+    }
+    if (!(await exists(ideaPath))) {
+      return res.status(400).json({ error: "idea file not found" });
+    }
+    ideaText = (await fs.readFile(ideaPath, "utf8")).trim();
+  } else if (!bibleExists) {
+    return res.status(400).json({ error: "idea or ideaFile is required for a new story" });
+  }
+
+  const jobConfig: Config = {
+    ...config,
+    chapters: chapters ? Number(chapters) : config.chapters,
+    scenesPerChapter: scenesPerChapter ? Number(scenesPerChapter) : config.scenesPerChapter,
+    durationMinutes: durationMinutes ? Number(durationMinutes) : config.durationMinutes,
+    model: model && String(model).trim() ? String(model).trim() : config.model
+  };
+
+  const job: GenerateJob = { name: name.trim(), status: "running", events: [], abortRequested: false };
+  generateJob = job;
+
+  const pushEvent = (e: ProgressEvent) => {
+    job.events.push(e);
+    progressEmitter.emit("generate", e);
+  };
+
+  (async () => {
+    try {
+      await generateStory(jobConfig, ideaText, outDir, pushEvent, () => job.abortRequested);
+      job.status = "done";
+    } catch (err: any) {
+      if (err?.message === "ABORTED") {
+        job.status = "stopped";
+        pushEvent({ type: "stopped" });
+      } else {
+        job.status = "error";
+        job.error = String(err?.message ?? err);
+        pushEvent({ type: "error", message: job.error });
+      }
+    }
+  })();
+
+  res.json({ started: true, name: job.name });
+});
+
+app.post("/api/generate/stop", (req, res) => {
+  if (!generateJob || generateJob.status !== "running") {
+    return res.status(409).json({ error: "No generate job is running" });
+  }
+  generateJob.abortRequested = true;
+  res.json({ stopping: true });
+});
+
+app.get("/api/generate/stream", (req, res) => {
+  const name = String(req.query.name ?? "");
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  if (!generateJob || generateJob.name !== name) {
+    res.write(`data: ${JSON.stringify({ type: "idle" })}\n\n`);
+    return res.end();
+  }
+
+  for (const e of generateJob.events) {
+    res.write(`data: ${JSON.stringify(e)}\n\n`);
+  }
+
+  const onEvent = (e: ProgressEvent) => res.write(`data: ${JSON.stringify(e)}\n\n`);
+  progressEmitter.on("generate", onEvent);
+  req.on("close", () => progressEmitter.off("generate", onEvent));
 });
 
 const PORT = Number(process.env.PORT ?? 4000);
