@@ -11,6 +11,7 @@ A local pipeline that generates long-form Vietnamese drama stories via a local O
 - `npm install` — install deps (tsx, typescript; no test framework, no linter configured)
 - `npm run dev -- .\stories\example\idea.txt` — run the story pipeline on an idea file, writes to `output/<idea-filename>/`
 - `npm run tts -- .\output\<idea-name>` — build a TTS manifest from a generated story and run the Python worker to synthesize audio (requires a Python env with `vieneu` installed and a voice sample)
+- `npm start` — launch the local web UI (Express + SSE) on `http://localhost:4000` (override with `PORT`); drives story generation and TTS through the browser instead of the CLI
 
 There are no test or lint scripts. `tsc` is a dependency but not wired to a script; use `npx tsc --noEmit` to type-check if needed.
 
@@ -18,7 +19,7 @@ There are no test or lint scripts. `tsc` is a dependency but not wired to a scri
 
 ### Story generation pipeline (`src/index.ts` → `src/pipeline.ts`)
 
-`generateStory(config, idea, outDir)` runs a fixed sequence of LLM calls, each stage caching its output to disk under `outDir` so a rerun resumes instead of regenerating:
+`generateStory(config, idea, outDir, onProgress?, shouldAbort?)` runs a fixed sequence of LLM calls, each stage caching its output to disk under `outDir` so a rerun resumes instead of regenerating. `onProgress` (optional) receives `ProgressEvent`s (`bible`/`outline`/`chapter`/`scene`/`edit`/`error`/`stopped`/`complete`, see `src/types.ts`) as each stage starts/caches/completes; `shouldAbort` (optional) is polled between steps and, if it returns true, aborts the run by throwing `Error("ABORTED")`. Both are used by `src/server.ts` to drive the web UI's live progress and stop button; the CLI (`src/index.ts`) calls `generateStory` without them.
 
 1. **Story Bible** (`story_bible.json`) — title/genre/theme/premise/tone/characters/setting/conflicts/ending, from the `ARCH` prompt.
 2. **Outline** (`outline.json`) — N chapters (`config.chapters`) via the `OUT` prompt, validated by `validateOutline`.
@@ -42,11 +43,16 @@ Per the README: Story Bible, Outline, Chapter Plan, Scene Writing, and Chapter E
 
 ### TTS pipeline (`src/tts/index.ts` + `src/tts/worker.py`)
 
-Separate from the story pipeline, run manually after a story exists:
+Runs after a story exists, either manually via the CLI or driven by the web server:
 
-1. `index.ts` reads `final_story.txt` (or falls back to concatenating `chapter-*.txt`), cleans Markdown, splits into ≤450-char segments on paragraph/sentence boundaries, and writes `tts/manifest.json` (segments with id/text/output path).
-2. `index.ts` spawns `python src/tts/worker.py --manifest ... --voice ... --ref-audio ...`, which loads `vieneu.Vieneu`, does reference-audio voice cloning per segment, and writes `tts/audio/<0001>.wav` etc. Existing output files >1000 bytes are skipped, so reruns resume like the story pipeline.
+1. The exported `runTTS(storyDir, opts, onProgress?)` reads `final_story.txt` (or falls back to concatenating `chapter-*.txt`), cleans Markdown, splits into ≤450-char segments on paragraph/sentence boundaries, and writes `tts/manifest.json` (segments with id/text/output path).
+2. It spawns `python src/tts/worker.py --manifest ... --voice ... --ref-audio ...`, which loads `vieneu.Vieneu`, does reference-audio voice cloning per segment, and writes `tts/audio/<0001>.wav` etc. Existing output files >1000 bytes are skipped, so reruns resume like the story pipeline.
 3. Default voice sample path is `voices/minhthu.mp3`; override with `TTS_REF_AUDIO`. `TTS_REF_TEXT` (transcript of the sample) improves cloning quality when set.
+4. `opts.pipeOutput` controls stdio: unset/falsy (the CLI path, `main()` at the bottom of the file) uses `stdio: "inherit"` so the Python process's TTY/prompts pass through untouched; `pipeOutput: true` (used by `src/server.ts`) pipes stdout/stderr instead, parsing `[i/total] SKIP|TTS ...` lines out of stdout into `TtsProgressEvent`s (`src/types.ts`) for `onProgress`.
+
+### Web server (`src/server.ts`)
+
+Express app (`npm start`, default port 4000, binds `127.0.0.1` only) serving `public/` statically and `output/` at `/output` for direct file access (story text, audio). Holds in-memory single-job-at-a-time state for both a generate job and a TTS job (`generateJob`/`ttsJob`); `POST /api/generate` and `POST /api/tts/:name` 409 if a job of that kind is already running, otherwise kick off `generateStory`/`runTTS` in the background and stream their `onProgress` events to the browser over SSE (`GET /api/generate/stream`, `GET /api/tts/:name/stream`), replaying buffered events on (re)connect. All routes that resolve a filesystem path from request input go through a shared `resolveUnder(root, name)` helper to keep the path inside `output/`/`stories/`.
 
 ### Config (`src/config.ts`, `src/types.ts`)
 

@@ -14,6 +14,11 @@ app.use(express.json());
 app.use(express.static(path.resolve("public")));
 app.use("/output", express.static(path.resolve("output")));
 
+function resolveUnder(root: string, name: string): string | null {
+  const p = path.resolve(root, name);
+  return p === root || p.startsWith(root + path.sep) ? p : null;
+}
+
 interface GenerateJob {
   name: string;
   status: "running" | "done" | "error" | "stopped";
@@ -50,7 +55,12 @@ async function findIdeaFiles(dir: string): Promise<string[]> {
 }
 
 async function readJSONIfExists(file: string): Promise<any> {
-  return (await exists(file)) ? JSON.parse(await fs.readFile(file, "utf8")) : null;
+  if (!(await exists(file))) return null;
+  try {
+    return JSON.parse(await fs.readFile(file, "utf8"));
+  } catch {
+    return null;
+  }
 }
 
 app.get("/api/ideas", async (req, res) => {
@@ -93,7 +103,8 @@ app.get("/api/stories", async (req, res) => {
 });
 
 app.get("/api/stories/:name", async (req, res) => {
-  const dir = path.resolve("output", req.params.name);
+  const dir = resolveUnder(path.resolve("output"), req.params.name);
+  if (!dir) return res.status(400).json({ error: "invalid name" });
   if (!(await exists(dir))) return res.status(404).json({ error: "story not found" });
 
   const bible = await readJSONIfExists(path.join(dir, "story_bible.json"));
@@ -120,59 +131,67 @@ app.post("/api/generate", async (req, res) => {
   const job: GenerateJob = { name: name.trim(), status: "running", events: [], abortRequested: false };
   generateJob = job;
 
-  const outDir = path.resolve("output", name.trim());
-  const bibleExists = await exists(path.join(outDir, "story_bible.json"));
-
-  let ideaText = "";
-  if (idea && String(idea).trim()) {
-    ideaText = String(idea).trim();
-  } else if (ideaFile) {
-    const storiesRoot = path.resolve("stories");
-    const ideaPath = path.resolve(storiesRoot, String(ideaFile));
-    if (ideaPath !== storiesRoot && !ideaPath.startsWith(storiesRoot + path.sep)) {
+  try {
+    const outDir = resolveUnder(path.resolve("output"), name.trim());
+    if (!outDir) {
       generateJob = null;
-      return res.status(400).json({ error: "invalid ideaFile path" });
+      return res.status(400).json({ error: "invalid name" });
     }
-    if (!(await exists(ideaPath))) {
-      generateJob = null;
-      return res.status(400).json({ error: "idea file not found" });
-    }
-    ideaText = (await fs.readFile(ideaPath, "utf8")).trim();
-  } else if (!bibleExists) {
-    generateJob = null;
-    return res.status(400).json({ error: "idea or ideaFile is required for a new story" });
-  }
+    const bibleExists = await exists(path.join(outDir, "story_bible.json"));
 
-  const jobConfig: Config = {
-    ...config,
-    chapters: chapters ? Number(chapters) : config.chapters,
-    scenesPerChapter: scenesPerChapter ? Number(scenesPerChapter) : config.scenesPerChapter,
-    durationMinutes: durationMinutes ? Number(durationMinutes) : config.durationMinutes,
-    model: model && String(model).trim() ? String(model).trim() : config.model
-  };
-
-  const pushEvent = (e: ProgressEvent) => {
-    job.events.push(e);
-    progressEmitter.emit("generate", e);
-  };
-
-  (async () => {
-    try {
-      await generateStory(jobConfig, ideaText, outDir, pushEvent, () => job.abortRequested);
-      job.status = "done";
-    } catch (err: any) {
-      if (err?.message === "ABORTED") {
-        job.status = "stopped";
-        pushEvent({ type: "stopped" });
-      } else {
-        job.status = "error";
-        job.error = String(err?.message ?? err);
-        pushEvent({ type: "error", message: job.error });
+    let ideaText = "";
+    if (idea && String(idea).trim()) {
+      ideaText = String(idea).trim();
+    } else if (ideaFile) {
+      const ideaPath = resolveUnder(path.resolve("stories"), String(ideaFile));
+      if (!ideaPath) {
+        generateJob = null;
+        return res.status(400).json({ error: "invalid ideaFile path" });
       }
+      if (!(await exists(ideaPath))) {
+        generateJob = null;
+        return res.status(400).json({ error: "idea file not found" });
+      }
+      ideaText = (await fs.readFile(ideaPath, "utf8")).trim();
+    } else if (!bibleExists) {
+      generateJob = null;
+      return res.status(400).json({ error: "idea or ideaFile is required for a new story" });
     }
-  })();
 
-  res.json({ started: true, name: job.name });
+    const jobConfig: Config = {
+      ...config,
+      chapters: chapters ? Number(chapters) : config.chapters,
+      scenesPerChapter: scenesPerChapter ? Number(scenesPerChapter) : config.scenesPerChapter,
+      durationMinutes: durationMinutes ? Number(durationMinutes) : config.durationMinutes,
+      model: model && String(model).trim() ? String(model).trim() : config.model
+    };
+
+    const pushEvent = (e: ProgressEvent) => {
+      job.events.push(e);
+      progressEmitter.emit("generate", { jobName: job.name, event: e });
+    };
+
+    (async () => {
+      try {
+        await generateStory(jobConfig, ideaText, outDir, pushEvent, () => job.abortRequested);
+        job.status = "done";
+      } catch (err: any) {
+        if (err?.message === "ABORTED") {
+          job.status = "stopped";
+          pushEvent({ type: "stopped" });
+        } else {
+          job.status = "error";
+          job.error = String(err?.message ?? err);
+          pushEvent({ type: "error", message: job.error });
+        }
+      }
+    })();
+
+    res.json({ started: true, name: job.name });
+  } catch (e: any) {
+    generateJob = null;
+    return res.status(500).json({ error: String(e?.message ?? e) });
+  }
 });
 
 app.post("/api/generate/stop", (req, res) => {
@@ -190,16 +209,25 @@ app.get("/api/generate/stream", (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  const safeWrite = (data: unknown) => {
+    try {
+      if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {}
+  };
+
   if (!generateJob || generateJob.name !== name) {
-    res.write(`data: ${JSON.stringify({ type: "idle" })}\n\n`);
+    safeWrite({ type: "idle" });
     return res.end();
   }
 
   for (const e of generateJob.events) {
-    res.write(`data: ${JSON.stringify(e)}\n\n`);
+    safeWrite(e);
   }
 
-  const onEvent = (e: ProgressEvent) => res.write(`data: ${JSON.stringify(e)}\n\n`);
+  const onEvent = ({ jobName, event }: { jobName: string; event: ProgressEvent }) => {
+    if (jobName !== name) return;
+    safeWrite(event);
+  };
   progressEmitter.on("generate", onEvent);
   req.on("close", () => progressEmitter.off("generate", onEvent));
 });
@@ -210,10 +238,14 @@ app.post("/api/tts/:name", async (req, res) => {
     return res.status(409).json({ error: `A TTS job is already running: ${ttsJob.name}` });
   }
 
+  const dir = resolveUnder(path.resolve("output"), name);
+  if (!dir) {
+    return res.status(400).json({ error: "invalid name" });
+  }
+
   const job: TTSJob = { name, status: "running", events: [] };
   ttsJob = job;
 
-  const dir = path.resolve("output", name);
   if (!(await exists(dir))) {
     ttsJob = null;
     return res.status(404).json({ error: "story not found" });
@@ -227,7 +259,7 @@ app.post("/api/tts/:name", async (req, res) => {
 
   const pushEvent = (e: TtsProgressEvent) => {
     job.events.push(e);
-    ttsEmitter.emit("tts", e);
+    ttsEmitter.emit("tts", { jobName: job.name, event: e });
   };
 
   (async () => {
@@ -238,7 +270,8 @@ app.post("/api/tts/:name", async (req, res) => {
           pythonCommand: config.tts.pythonCommand,
           voice: config.tts.voice,
           refAudio,
-          refText: process.env.TTS_REF_TEXT ?? ""
+          refText: process.env.TTS_REF_TEXT ?? "",
+          pipeOutput: true
         },
         pushEvent
       );
@@ -254,26 +287,36 @@ app.post("/api/tts/:name", async (req, res) => {
 });
 
 app.get("/api/tts/:name/stream", (req, res) => {
+  const name = req.params.name;
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  if (!ttsJob || ttsJob.name !== req.params.name) {
-    res.write(`data: ${JSON.stringify({ type: "idle" })}\n\n`);
+  const safeWrite = (data: unknown) => {
+    try {
+      if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {}
+  };
+
+  if (!ttsJob || ttsJob.name !== name) {
+    safeWrite({ type: "idle" });
     return res.end();
   }
 
   for (const e of ttsJob.events) {
-    res.write(`data: ${JSON.stringify(e)}\n\n`);
+    safeWrite(e);
   }
 
-  const onEvent = (e: TtsProgressEvent) => res.write(`data: ${JSON.stringify(e)}\n\n`);
+  const onEvent = ({ jobName, event }: { jobName: string; event: TtsProgressEvent }) => {
+    if (jobName !== name) return;
+    safeWrite(event);
+  };
   ttsEmitter.on("tts", onEvent);
   req.on("close", () => ttsEmitter.off("tts", onEvent));
 });
 
 const PORT = Number(process.env.PORT ?? 4000);
-app.listen(PORT, () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`Story Generator UI: http://localhost:${PORT}`);
 });

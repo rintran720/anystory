@@ -190,7 +190,10 @@ function connectGenerateStream(name) {
 }
 
 function handleGenerateEvent(event) {
-  if (event.type === "idle") return;
+  if (event.type === "idle") {
+    state.generateSource?.close();
+    return;
+  }
   appendLog("run-log", `[${event.type}] ${JSON.stringify(event)}`);
 
   if (event.type === "bible") {
@@ -269,7 +272,10 @@ function connectTtsStream(name) {
 }
 
 function handleTtsEvent(name, event) {
-  if (event.type === "idle") return;
+  if (event.type === "idle") {
+    state.ttsSource?.close();
+    return;
+  }
   appendLog("tts-log", `[${event.type}] ${JSON.stringify(event)}`);
 
   if (event.type === "segment") {

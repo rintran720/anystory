@@ -108,6 +108,7 @@ export interface TTSOptions {
   voice: string;
   refAudio: string;
   refText?: string;
+  pipeOutput?: boolean;
 }
 
 export async function runTTS(
@@ -165,31 +166,33 @@ export async function runTTS(
     }
 
     const p = spawn(opts.pythonCommand, args, {
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: opts.pipeOutput ? ["ignore", "pipe", "pipe"] : "inherit",
       env: { ...process.env, PYTHONUNBUFFERED: "1" }
     });
 
-    let buffer = "";
-    p.stdout.on("data", chunk => {
-      process.stdout.write(chunk);
-      buffer += chunk.toString();
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const match = line.match(/^\[(\d+)\/(\d+)\]\s+(SKIP|TTS)\s+(.*)$/);
-        if (match && onProgress) {
-          onProgress({
-            type: "segment",
-            index: Number(match[1]),
-            total: Number(match[2]),
-            text: match[4],
-            skipped: match[3] === "SKIP"
-          });
+    if (opts.pipeOutput) {
+      let buffer = "";
+      p.stdout!.on("data", chunk => {
+        process.stdout.write(chunk);
+        buffer += chunk.toString();
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const match = line.match(/^\[(\d+)\/(\d+)\]\s+(SKIP|TTS)\s+(.*)$/);
+          if (match && onProgress) {
+            onProgress({
+              type: "segment",
+              index: Number(match[1]),
+              total: Number(match[2]),
+              text: match[4],
+              skipped: match[3] === "SKIP"
+            });
+          }
         }
-      }
-    });
+      });
 
-    p.stderr.on("data", chunk => process.stderr.write(chunk));
+      p.stderr!.on("data", chunk => process.stderr.write(chunk));
+    }
 
     p.on("error", reject);
     p.on("exit", code =>
