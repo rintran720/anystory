@@ -63,7 +63,7 @@ app.get("/api/stories", async (req, res) => {
 
   const entries = await fs.readdir(root, { withFileTypes: true });
   const stories = await Promise.all(
-    entries.filter(e => e.isDirectory()).map(async (e) => {
+    entries.filter(e => e.isDirectory()).map(async e => {
       const dir = path.join(root, e.name);
       const outline = await readJSONIfExists(path.join(dir, "outline.json"));
       const totalChapters = outline?.chapters?.length ?? 0;
@@ -74,15 +74,13 @@ app.get("/api/stories", async (req, res) => {
       const hasAudio = (await exists(audioDir)) &&
         (await fs.readdir(audioDir)).some(f => f.endsWith(".wav"));
 
-      const job = generateJob as any;
-      const isRunning = job && job.name === e.name && job.status === "running";
       return {
         name: e.name,
         totalChapters,
         completedChapters,
         hasFinalStory,
         hasAudio,
-        isRunning
+        isRunning: generateJob?.name === e.name && generateJob.status === "running"
       };
     })
   );
