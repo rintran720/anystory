@@ -69,6 +69,15 @@ app.get("/api/ideas", async (req, res) => {
   res.json({ files });
 });
 
+app.get("/api/config", (req, res) => {
+  res.json({
+    chapters: config.chapters,
+    scenesPerChapter: config.scenesPerChapter,
+    durationMinutes: config.durationMinutes,
+    model: config.model
+  });
+});
+
 app.get("/api/stories", async (req, res) => {
   const root = path.resolve("output");
   if (!(await exists(root))) return res.json({ stories: [] });

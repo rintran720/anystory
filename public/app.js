@@ -40,13 +40,20 @@ async function loadIdeaFiles() {
   }
 }
 
-function openCreateForm(prefillName) {
+async function openCreateForm(prefillName) {
   document.getElementById("create-form").reset();
   document.getElementById("create-error").hidden = true;
   const nameField = document.getElementById("field-name");
   nameField.value = prefillName || "";
   nameField.readOnly = Boolean(prefillName);
   show("view-create");
+
+  const res = await fetch("/api/config");
+  const defaults = await res.json();
+  document.getElementById("field-chapters").value = defaults.chapters;
+  document.getElementById("field-scenes").value = defaults.scenesPerChapter;
+  document.getElementById("field-duration").value = defaults.durationMinutes;
+  document.getElementById("field-model").value = defaults.model;
 }
 
 document.getElementById("btn-new-story").addEventListener("click", async () => {
