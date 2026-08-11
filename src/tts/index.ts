@@ -38,7 +38,7 @@ function splitText(text: string, maxChars = 450) {
     }
 
     const sentences =
-      paragraph.match(/[^.!?…]+[.!?…]+(?:[""»']+)?|[^.!?…]+$/g) ??
+      paragraph.match(/[^.!?…]+[.!?…]+(?:["”»']+)?|[^.!?…]+$/g) ??
       [paragraph];
 
     let current = "";
@@ -165,7 +165,8 @@ export async function runTTS(
     }
 
     const p = spawn(opts.pythonCommand, args, {
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, PYTHONUNBUFFERED: "1" }
     });
 
     let buffer = "";
