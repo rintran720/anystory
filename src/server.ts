@@ -5,7 +5,7 @@ import { EventEmitter } from "node:events";
 import { exists } from "./utils.js";
 import { generateStory } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
-import { config } from "./config.js";
+import { config, loadSettingsOverrides } from "./config.js";
 import type { ProgressEvent, TtsProgressEvent } from "./types.js";
 import type { Config } from "./types.js";
 
@@ -78,6 +78,34 @@ app.get("/api/config", (req, res) => {
   });
 });
 
+app.get("/api/settings", async (req, res) => {
+  const overrides = await loadSettingsOverrides();
+  res.json({
+    provider: overrides.provider ?? config.provider,
+    ollamaModel: overrides.model ?? config.model,
+    deepseekModel: overrides.deepseek?.model ?? config.deepseek.model,
+    deepseekApiKeySet: Boolean((overrides.deepseek?.apiKey ?? config.deepseek.apiKey).trim())
+  });
+});
+
+app.post("/api/settings", async (req, res) => {
+  const { provider, ollamaModel, deepseekModel, deepseekApiKey } = req.body ?? {};
+  if (provider !== "ollama" && provider !== "deepseek") {
+    return res.status(400).json({ error: "provider must be 'ollama' or 'deepseek'" });
+  }
+
+  const current = await loadSettingsOverrides();
+  const settings = {
+    provider,
+    ollamaModel: (ollamaModel && String(ollamaModel).trim()) || current.model || config.model,
+    deepseekApiKey: (deepseekApiKey && String(deepseekApiKey).trim()) || current.deepseek?.apiKey || config.deepseek.apiKey,
+    deepseekModel: (deepseekModel && String(deepseekModel).trim()) || current.deepseek?.model || config.deepseek.model
+  };
+
+  await fs.writeFile("settings.json", JSON.stringify(settings, null, 2), "utf8");
+  res.json({ saved: true });
+});
+
 app.get("/api/stories", async (req, res) => {
   const root = path.resolve("output");
   if (!(await exists(root))) return res.json({ stories: [] });
@@ -128,7 +156,7 @@ app.get("/api/stories/:name", async (req, res) => {
 });
 
 app.post("/api/generate", async (req, res) => {
-  const { name, idea, ideaFile, chapters, scenesPerChapter, durationMinutes, model } = req.body ?? {};
+  const { name, idea, ideaFile, chapters, scenesPerChapter, durationMinutes } = req.body ?? {};
 
   if (!name || typeof name !== "string" || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
@@ -167,12 +195,13 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "idea or ideaFile is required for a new story" });
     }
 
+    const settingsOverrides = await loadSettingsOverrides();
+    const baseConfig = { ...config, ...settingsOverrides };
     const jobConfig: Config = {
-      ...config,
-      chapters: chapters ? Number(chapters) : config.chapters,
-      scenesPerChapter: scenesPerChapter ? Number(scenesPerChapter) : config.scenesPerChapter,
-      durationMinutes: durationMinutes ? Number(durationMinutes) : config.durationMinutes,
-      model: model && String(model).trim() ? String(model).trim() : config.model
+      ...baseConfig,
+      chapters: chapters ? Number(chapters) : baseConfig.chapters,
+      scenesPerChapter: scenesPerChapter ? Number(scenesPerChapter) : baseConfig.scenesPerChapter,
+      durationMinutes: durationMinutes ? Number(durationMinutes) : baseConfig.durationMinutes
     };
 
     const pushEvent = (e: ProgressEvent) => {
