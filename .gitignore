@@ -4,5 +4,6 @@ output/
 *.log
 .env
 .env.local
+settings.json
 .DS_Store
 Thumbs.db
