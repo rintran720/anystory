@@ -1,0 +1,6 @@
+import fs from"node:fs/promises";import path from"node:path";
+export async function exists(f:string){try{await fs.access(f);return true}catch{return false}}
+export async function writeText(f:string,x:string){await fs.mkdir(path.dirname(f),{recursive:true});await fs.writeFile(f,x,"utf8")}
+export async function writeJSON(f:string,x:any){await fs.mkdir(path.dirname(f),{recursive:true});await fs.writeFile(f,JSON.stringify(x,null,2),"utf8")}
+export function cleanGeneratedStory(t:string){return t.trim().replace(/^```(?:text|markdown)?\s*/i,"").replace(/\s*```$/i,"").replace(/^#{1,6}\s+/gm,"").replace(/\*\*(.*?)\*\*/gs,"$1").replace(/__(.*?)__/gs,"$1").replace(/^\s*>\s?/gm,"").replace(/^\s*[-*+]\s+/gm,"").replace(/^\s*\d+[.)]\s+/gm,"").replace(/^\s*([-*_]){3,}\s*$/gm,"").replace(/^(dưới đây là|đây là phiên bản|đây là bản|sau đây là|bản đã được)[^:：]*[:：]\s*/i,"").trim()}
+export function dedupeMemoryArrays(m:any){for(const k of["knownFacts","revealedSecrets","unresolvedQuestions","foreshadowing"])if(Array.isArray(m?.[k]))m[k]=[...new Set(m[k])];return m}

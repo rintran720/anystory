@@ -1,0 +1,1 @@
+export interface Config{model:string;language:string;durationMinutes:number;targetWordsPerMinute:number;chapters:number;scenesPerChapter:number;numCtx:number;temperature:number;ollamaUrl:string;tts:{pythonCommand:string;voice:string}}

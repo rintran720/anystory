@@ -1,0 +1,2 @@
+import type {Config} from "./types.js";
+export const config:Config={model:process.env.OLLAMA_MODEL??"qwen3.5:9b",language:"vi",durationMinutes:60,targetWordsPerMinute:150,chapters:6,scenesPerChapter:5,numCtx:4096,temperature:.7,ollamaUrl:process.env.OLLAMA_URL??"http://localhost:11434/api/chat",tts:{pythonCommand:process.env.PYTHON_COMMAND??"python",voice:process.env.TTS_VOICE??"Ly"}};
