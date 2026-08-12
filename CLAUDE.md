@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A local pipeline that generates long-form Vietnamese drama stories via a local Ollama LLM, then optionally converts the finished story to voice-over audio via a local Python TTS worker (VieNeu-TTS with voice cloning). No cloud APIs — everything runs against `localhost:11434` (Ollama) and a local Python environment.
+A local pipeline that generates long-form Vietnamese drama stories via a local Ollama LLM (or, optionally, the DeepSeek cloud API — see Config below), then optionally converts the finished story to voice-over audio via a local Python TTS worker (VieNeu-TTS with voice cloning). By default everything runs locally against `localhost:11434` (Ollama) and a local Python environment; DeepSeek is an opt-in alternative for the story-generation LLM calls only.
 
 ## Commands
 
@@ -56,7 +56,9 @@ Express app (`npm start`, default port 4000, binds `127.0.0.1` only) serving `pu
 
 ### Config (`src/config.ts`, `src/types.ts`)
 
-All tunables live in one `Config` object, overridable via env vars: `OLLAMA_MODEL`, `OLLAMA_URL`, `PYTHON_COMMAND`, `TTS_VOICE` (`src/tts/index.ts` imports `config` for these; it separately reads `TTS_REF_AUDIO`/`TTS_REF_TEXT` from env since those aren't in `Config`). Story length is controlled by `durationMinutes × targetWordsPerMinute`, chapter/scene count by `chapters`/`scenesPerChapter`.
+All tunables live in one `Config` object, overridable via env vars: `OLLAMA_MODEL`, `OLLAMA_URL`, `PYTHON_COMMAND`, `TTS_VOICE`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` (`src/tts/index.ts` imports `config` for the TTS ones; it separately reads `TTS_REF_AUDIO`/`TTS_REF_TEXT` from env since those aren't in `Config`). Story length is controlled by `durationMinutes × targetWordsPerMinute`, chapter/scene count by `chapters`/`scenesPerChapter`.
+
+`Config.provider` (`"ollama"|"deepseek"`) selects which LLM backend `src/ollama.ts`'s `askLLM` calls — Ollama's `/api/chat` or DeepSeek's OpenAI-compatible `/chat/completions`, both behind the same `askJSON`/`retryLLM` retry wrappers, so nothing downstream of `askLLM` needs to know which provider is active. `loadSettingsOverrides()` (`src/config.ts`) reads an optional `settings.json` (git-ignored, repo root) and returns override fields; both the CLI (`src/index.ts`) and the web server (`src/server.ts`, `POST /api/generate`) merge it over the base `config` before each run, so switching provider via the web UI's Settings screen (`GET`/`POST /api/settings`) takes effect for the CLI too without restarting anything. Absent `settings.json` behaves exactly as before (`provider:"ollama"`).
 
 ## Code style note
 
