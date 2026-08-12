@@ -110,11 +110,16 @@ document.getElementById("settings-form").addEventListener("submit", async ev => 
   });
   const data = await res.json();
 
-  messageEl.className = res.ok ? "success" : "error";
-  messageEl.textContent = res.ok ? "Đã lưu." : (data.error || "Đã có lỗi xảy ra.");
-  messageEl.hidden = false;
-
-  if (res.ok) openSettings();
+  if (res.ok) {
+    await openSettings();
+    messageEl.className = "success";
+    messageEl.textContent = "Đã lưu.";
+    messageEl.hidden = false;
+  } else {
+    messageEl.className = "error";
+    messageEl.textContent = data.error || "Đã có lỗi xảy ra.";
+    messageEl.hidden = false;
+  }
 });
 
 async function loadHome() {

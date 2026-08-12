@@ -73,8 +73,7 @@ app.get("/api/config", (req, res) => {
   res.json({
     chapters: config.chapters,
     scenesPerChapter: config.scenesPerChapter,
-    durationMinutes: config.durationMinutes,
-    model: config.model
+    durationMinutes: config.durationMinutes
   });
 });
 
@@ -98,11 +97,12 @@ app.post("/api/settings", async (req, res) => {
   const settings = {
     provider,
     ollamaModel: (ollamaModel && String(ollamaModel).trim()) || current.model || config.model,
-    deepseekApiKey: (deepseekApiKey && String(deepseekApiKey).trim()) || current.deepseek?.apiKey || config.deepseek.apiKey,
+    deepseekApiKey: (deepseekApiKey && String(deepseekApiKey).trim()) || current.deepseek?.apiKey || "",
     deepseekModel: (deepseekModel && String(deepseekModel).trim()) || current.deepseek?.model || config.deepseek.model
   };
 
-  await fs.writeFile("settings.json", JSON.stringify(settings, null, 2), "utf8");
+  await fs.writeFile("settings.json.tmp", JSON.stringify(settings, null, 2), "utf8");
+  await fs.rename("settings.json.tmp", "settings.json");
   res.json({ saved: true });
 });
 
