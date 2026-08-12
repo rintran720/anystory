@@ -247,7 +247,7 @@ function statusLabel(status) {
 }
 
 function sceneStatusLabel(status) {
-  return { writing: "đang viết", memory: "đang cập nhật memory", done: "xong" }[status] || status;
+  return { writing: "đang viết", done: "xong" }[status] || status;
 }
 
 function connectGenerateStream(name) {
