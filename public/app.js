@@ -53,12 +53,68 @@ async function openCreateForm(prefillName) {
   document.getElementById("field-chapters").value = defaults.chapters;
   document.getElementById("field-scenes").value = defaults.scenesPerChapter;
   document.getElementById("field-duration").value = defaults.durationMinutes;
-  document.getElementById("field-model").value = defaults.model;
 }
 
 document.getElementById("btn-new-story").addEventListener("click", async () => {
   await loadIdeaFiles();
   openCreateForm(null);
+});
+
+document.getElementById("btn-settings").addEventListener("click", () => {
+  openSettings();
+  show("view-settings");
+});
+
+document.getElementById("field-provider").addEventListener("change", () => {
+  toggleProviderFields();
+});
+
+function toggleProviderFields() {
+  const provider = document.getElementById("field-provider").value;
+  document.getElementById("settings-ollama").hidden = provider !== "ollama";
+  document.getElementById("settings-deepseek").hidden = provider !== "deepseek";
+}
+
+async function openSettings() {
+  document.getElementById("settings-message").hidden = true;
+  document.getElementById("field-deepseek-key").value = "";
+
+  const res = await fetch("/api/settings");
+  const data = await res.json();
+  document.getElementById("field-provider").value = data.provider;
+  document.getElementById("field-ollama-model").value = data.ollamaModel;
+  document.getElementById("field-deepseek-model").value = data.deepseekModel;
+  document.getElementById("field-deepseek-key").placeholder = data.deepseekApiKeySet
+    ? "•••• đã lưu (để trống = giữ nguyên)"
+    : "Chưa có key";
+  toggleProviderFields();
+}
+
+document.getElementById("settings-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const messageEl = document.getElementById("settings-message");
+  messageEl.hidden = true;
+
+  const body = {
+    provider: document.getElementById("field-provider").value,
+    ollamaModel: document.getElementById("field-ollama-model").value.trim(),
+    deepseekModel: document.getElementById("field-deepseek-model").value
+  };
+  const apiKey = document.getElementById("field-deepseek-key").value.trim();
+  if (apiKey) body.deepseekApiKey = apiKey;
+
+  const res = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+
+  messageEl.className = res.ok ? "success" : "error";
+  messageEl.textContent = res.ok ? "Đã lưu." : (data.error || "Đã có lỗi xảy ra.");
+  messageEl.hidden = false;
+
+  if (res.ok) openSettings();
 });
 
 async function loadHome() {
@@ -115,8 +171,7 @@ document.getElementById("create-form").addEventListener("submit", async ev => {
     name,
     chapters: document.getElementById("field-chapters").value || undefined,
     scenesPerChapter: document.getElementById("field-scenes").value || undefined,
-    durationMinutes: document.getElementById("field-duration").value || undefined,
-    model: document.getElementById("field-model").value.trim() || undefined
+    durationMinutes: document.getElementById("field-duration").value || undefined
   };
 
   if (activeTab === "paste") {

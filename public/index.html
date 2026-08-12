@@ -10,6 +10,7 @@
 
 <section id="view-home">
   <button id="btn-new-story">+ Tạo truyện mới</button>
+  <button id="btn-settings">⚙️ Cài đặt</button>
   <table id="story-table">
     <thead><tr><th>Tên</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
     <tbody id="story-table-body"></tbody>
@@ -38,11 +39,40 @@
       <label>Số chương <input type="number" id="field-chapters" min="1"></label>
       <label>Số cảnh/chương <input type="number" id="field-scenes" min="1"></label>
       <label>Thời lượng (phút) <input type="number" id="field-duration" min="1"></label>
-      <label>Model Ollama <input type="text" id="field-model"></label>
     </fieldset>
 
     <p id="create-error" class="error" hidden></p>
     <button type="submit" id="btn-start">Bắt đầu</button>
+  </form>
+</section>
+
+<section id="view-settings" hidden>
+  <button class="btn-back" data-target="view-home">&larr; Quay lại</button>
+  <h2>Cài đặt</h2>
+  <form id="settings-form">
+    <label>Nguồn LLM
+      <select id="field-provider">
+        <option value="ollama">Ollama (local)</option>
+        <option value="deepseek">DeepSeek (cloud API)</option>
+      </select>
+    </label>
+
+    <div id="settings-ollama">
+      <label>Model Ollama <input type="text" id="field-ollama-model"></label>
+    </div>
+
+    <div id="settings-deepseek" hidden>
+      <label>DeepSeek API Key <input type="password" id="field-deepseek-key"></label>
+      <label>Model DeepSeek
+        <select id="field-deepseek-model">
+          <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+          <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="settings-message" hidden></p>
+    <button type="submit">Lưu</button>
   </form>
 </section>
 
