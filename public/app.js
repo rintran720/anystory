@@ -1,4 +1,25 @@
-const state = { currentStoryName: null, generateSource: null, ttsSource: null };
+const state = { currentStoryName: null, generateSource: null, ttsSource: null, wordsPerMinute: 150, currentBible: null, currentOutline: null };
+
+function suggestStructure(minutes, wpm) {
+  const words = minutes * wpm;
+  const chapters = Math.min(12, Math.max(3, Math.round(words / 1500)));
+  const scenesPerChapter = Math.min(6, Math.max(2, Math.round((words / chapters) / 300)));
+  return { chapters, scenesPerChapter };
+}
+
+function suggestFromDuration() {
+  const minutes = Number(document.getElementById("field-duration").value);
+  const hint = document.getElementById("suggest-hint");
+  if (!minutes || minutes <= 0) {
+    hint.hidden = true;
+    return;
+  }
+  const { chapters, scenesPerChapter } = suggestStructure(minutes, state.wordsPerMinute);
+  document.getElementById("field-chapters").value = chapters;
+  document.getElementById("field-scenes").value = scenesPerChapter;
+  hint.textContent = `Gợi ý theo ${minutes} phút: ${chapters} chương x ${scenesPerChapter} cảnh/chương.`;
+  hint.hidden = false;
+}
 
 function show(viewId) {
   document.querySelectorAll("section").forEach(s => { s.hidden = true; });
@@ -43,6 +64,9 @@ async function loadIdeaFiles() {
 async function openCreateForm(prefillName) {
   document.getElementById("create-form").reset();
   document.getElementById("create-error").hidden = true;
+  document.getElementById("suggest-hint").hidden = true;
+  document.getElementById("field-run-until").value = "all";
+  document.getElementById("field-chapter-limit-wrap").hidden = true;
   const nameField = document.getElementById("field-name");
   nameField.value = prefillName || "";
   nameField.readOnly = Boolean(prefillName);
@@ -50,10 +74,17 @@ async function openCreateForm(prefillName) {
 
   const res = await fetch("/api/config");
   const defaults = await res.json();
+  state.wordsPerMinute = defaults.targetWordsPerMinute || 150;
   document.getElementById("field-chapters").value = defaults.chapters;
   document.getElementById("field-scenes").value = defaults.scenesPerChapter;
   document.getElementById("field-duration").value = defaults.durationMinutes;
 }
+
+document.getElementById("field-duration").addEventListener("input", suggestFromDuration);
+
+document.getElementById("field-run-until").addEventListener("change", ev => {
+  document.getElementById("field-chapter-limit-wrap").hidden = ev.target.value !== "chapters";
+});
 
 document.getElementById("btn-new-story").addEventListener("click", async () => {
   await loadIdeaFiles();
@@ -172,11 +203,14 @@ document.getElementById("create-form").addEventListener("submit", async ev => {
   const name = document.getElementById("field-name").value.trim();
   const activeTab = document.querySelector(".tab-btn.active").dataset.tab;
 
+  const runUntil = document.getElementById("field-run-until").value;
   const body = {
     name,
     chapters: document.getElementById("field-chapters").value || undefined,
     scenesPerChapter: document.getElementById("field-scenes").value || undefined,
-    durationMinutes: document.getElementById("field-duration").value || undefined
+    durationMinutes: document.getElementById("field-duration").value || undefined,
+    runUntil,
+    chapterLimit: runUntil === "chapters" ? (document.getElementById("field-chapter-limit").value || undefined) : undefined
   };
 
   if (activeTab === "paste") {
@@ -214,6 +248,7 @@ async function openStory(name) {
   show("view-run");
 
   connectGenerateStream(name);
+  await refreshReviewPanel(name);
 
   const res = await fetch(`/api/stories/${encodeURIComponent(name)}`);
   const data = await res.json();
@@ -227,6 +262,28 @@ async function openStory(name) {
     showAudioFiles(name, data.audioFiles);
   }
 }
+
+async function refreshReviewPanel(name) {
+  const res = await fetch(`/api/stories/${encodeURIComponent(name)}`);
+  const data = await res.json();
+  state.currentBible = data.bible;
+  state.currentOutline = data.outline;
+  document.getElementById("review-panel").hidden = !data.bible && !data.outline;
+  document.getElementById("btn-view-bible").hidden = !data.bible;
+  document.getElementById("btn-view-outline").hidden = !data.outline;
+}
+
+document.getElementById("btn-view-bible").addEventListener("click", () => {
+  const el = document.getElementById("bible-text");
+  el.textContent = JSON.stringify(state.currentBible, null, 2);
+  el.hidden = false;
+});
+
+document.getElementById("btn-view-outline").addEventListener("click", () => {
+  const el = document.getElementById("outline-text");
+  el.textContent = JSON.stringify(state.currentOutline, null, 2);
+  el.hidden = false;
+});
 
 function setProgressFill(percent) {
   document.getElementById("run-progress-fill").style.width = `${Math.max(0, Math.min(100, percent))}%`;
@@ -280,9 +337,11 @@ function handleGenerateEvent(event) {
     setRunStatus("Đã hoàn tất.");
     document.getElementById("btn-stop").hidden = true;
     document.getElementById("run-result").hidden = false;
+    refreshReviewPanel(state.currentStoryName);
   } else if (event.type === "stopped") {
-    setRunStatus("Đã dừng.");
+    setRunStatus("Đã dừng. Xem lại kết quả rồi bấm Tiếp tục từ trang chủ nếu muốn chạy tiếp.");
     document.getElementById("btn-stop").hidden = true;
+    refreshReviewPanel(state.currentStoryName);
   } else if (event.type === "error") {
     setRunStatus(`Lỗi: ${event.message}`);
     document.getElementById("btn-stop").hidden = true;

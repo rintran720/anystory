@@ -6,7 +6,7 @@ import { exists } from "./utils.js";
 import { generateStory } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
-import type { ProgressEvent, TtsProgressEvent } from "./types.js";
+import type { ProgressEvent, TtsProgressEvent, RunUntil } from "./types.js";
 import type { Config } from "./types.js";
 
 const app = express();
@@ -73,7 +73,8 @@ app.get("/api/config", (req, res) => {
   res.json({
     chapters: config.chapters,
     scenesPerChapter: config.scenesPerChapter,
-    durationMinutes: config.durationMinutes
+    durationMinutes: config.durationMinutes,
+    targetWordsPerMinute: config.targetWordsPerMinute
   });
 });
 
@@ -156,7 +157,7 @@ app.get("/api/stories/:name", async (req, res) => {
 });
 
 app.post("/api/generate", async (req, res) => {
-  const { name, idea, ideaFile, chapters, scenesPerChapter, durationMinutes } = req.body ?? {};
+  const { name, idea, ideaFile, chapters, scenesPerChapter, durationMinutes, runUntil, chapterLimit } = req.body ?? {};
 
   if (!name || typeof name !== "string" || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
@@ -209,9 +210,14 @@ app.post("/api/generate", async (req, res) => {
       progressEmitter.emit("generate", { jobName: job.name, event: e });
     };
 
+    let runUntilArg: RunUntil | undefined;
+    if (runUntil === "bible") runUntilArg = { stage: "bible" };
+    else if (runUntil === "outline") runUntilArg = { stage: "outline" };
+    else if (runUntil === "chapters") runUntilArg = { stage: "chapters", chapterLimit: chapterLimit ? Number(chapterLimit) : undefined };
+
     (async () => {
       try {
-        await generateStory(jobConfig, ideaText, outDir, pushEvent, () => job.abortRequested);
+        await generateStory(jobConfig, ideaText, outDir, pushEvent, () => job.abortRequested, runUntilArg);
         job.status = "done";
       } catch (err: any) {
         if (err?.message === "ABORTED") {

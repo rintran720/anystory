@@ -36,9 +36,23 @@
 
     <fieldset>
       <legend>Cấu hình (để trống = mặc định)</legend>
+      <label>Thời lượng (phút) <input type="number" id="field-duration" min="1"></label>
       <label>Số chương <input type="number" id="field-chapters" min="1"></label>
       <label>Số cảnh/chương <input type="number" id="field-scenes" min="1"></label>
-      <label>Thời lượng (phút) <input type="number" id="field-duration" min="1"></label>
+      <p id="suggest-hint" class="hint" hidden></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Chạy đến bước nào</legend>
+      <label>Chạy đến
+        <select id="field-run-until">
+          <option value="all">Toàn bộ truyện</option>
+          <option value="bible">Chỉ tạo Story Bible (để review trước)</option>
+          <option value="outline">Đến hết Outline (để review cấu trúc)</option>
+          <option value="chapters">Chạy thêm N chương rồi dừng</option>
+        </select>
+      </label>
+      <label id="field-chapter-limit-wrap" hidden>Số chương chạy thêm <input type="number" id="field-chapter-limit" min="1"></label>
     </fieldset>
 
     <p id="create-error" class="error" hidden></p>
@@ -86,6 +100,13 @@
   </div>
 
   <button id="btn-stop" hidden>Dừng</button>
+
+  <div id="review-panel" hidden>
+    <button id="btn-view-bible" hidden>Xem Story Bible</button>
+    <button id="btn-view-outline" hidden>Xem Outline</button>
+    <pre id="bible-text" hidden></pre>
+    <pre id="outline-text" hidden></pre>
+  </div>
 
   <pre id="run-log"></pre>
 
