@@ -74,7 +74,8 @@ app.get("/api/config", (req, res) => {
     chapters: config.chapters,
     scenesPerChapter: config.scenesPerChapter,
     durationMinutes: config.durationMinutes,
-    targetWordsPerMinute: config.targetWordsPerMinute
+    targetWordsPerMinute: config.targetWordsPerMinute,
+    silenceGapMs: config.tts.silenceGapMs
   });
 });
 
@@ -152,8 +153,10 @@ app.get("/api/stories/:name", async (req, res) => {
   const audioFiles = (await exists(audioDir))
     ? (await fs.readdir(audioDir)).filter(f => f.endsWith(".wav")).sort()
     : [];
+  const finalAudioPath = path.join(dir, "tts", "final_audio.wav");
+  const finalAudio = (await exists(finalAudioPath)) ? "tts/final_audio.wav" : null;
 
-  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles });
+  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio });
 });
 
 app.post("/api/generate", async (req, res) => {
@@ -278,6 +281,9 @@ app.get("/api/generate/stream", (req, res) => {
 
 app.post("/api/tts/:name", async (req, res) => {
   const name = req.params.name;
+  const silenceGapMs = req.body?.silenceGapMs != null && req.body.silenceGapMs !== ""
+    ? Number(req.body.silenceGapMs)
+    : config.tts.silenceGapMs;
   if (ttsJob && ttsJob.status === "running") {
     return res.status(409).json({ error: `A TTS job is already running: ${ttsJob.name}` });
   }
@@ -315,7 +321,8 @@ app.post("/api/tts/:name", async (req, res) => {
           voice: config.tts.voice,
           refAudio,
           refText: process.env.TTS_REF_TEXT ?? "",
-          pipeOutput: true
+          pipeOutput: true,
+          silenceGapMs
         },
         pushEvent
       );

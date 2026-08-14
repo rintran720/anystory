@@ -250,6 +250,9 @@ async function openStory(name) {
   connectGenerateStream(name);
   await refreshReviewPanel(name);
 
+  const cfg = await fetch("/api/config").then(r => r.json());
+  document.getElementById("field-silence-gap").value = cfg.silenceGapMs;
+
   const res = await fetch(`/api/stories/${encodeURIComponent(name)}`);
   const data = await res.json();
   if (data.hasFinalStory) {
@@ -258,8 +261,10 @@ async function openStory(name) {
     setRunStatus("Đã hoàn tất.");
     setProgressFill(100);
   }
-  if (data.audioFiles && data.audioFiles.length) {
-    showAudioFiles(name, data.audioFiles);
+  if ((data.audioFiles && data.audioFiles.length) || data.finalAudio) {
+    document.getElementById("tts-panel").hidden = false;
+    showAudioFiles(name, data.audioFiles || []);
+    showFinalAudio(name, data.finalAudio);
   }
 }
 
@@ -378,10 +383,16 @@ document.getElementById("btn-run-tts").addEventListener("click", async () => {
   document.getElementById("tts-panel").hidden = false;
   document.getElementById("tts-log").textContent = "";
   document.getElementById("tts-audio-list").innerHTML = "";
+  document.getElementById("tts-final-audio").hidden = true;
   setTtsProgress(0);
   setTtsStatus("Đang bắt đầu...");
 
-  const res = await fetch(`/api/tts/${encodeURIComponent(name)}`, { method: "POST" });
+  const silenceGapMs = document.getElementById("field-silence-gap").value || undefined;
+  const res = await fetch(`/api/tts/${encodeURIComponent(name)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ silenceGapMs })
+  });
   const data = await res.json();
   if (!res.ok) {
     setTtsStatus(`Lỗi: ${data.error}`);
@@ -428,6 +439,19 @@ async function loadAudioFiles(name) {
   const res = await fetch(`/api/stories/${encodeURIComponent(name)}`);
   const data = await res.json();
   showAudioFiles(name, data.audioFiles || []);
+  showFinalAudio(name, data.finalAudio);
+}
+
+function showFinalAudio(name, finalAudio) {
+  const panel = document.getElementById("tts-final-audio");
+  if (!finalAudio) {
+    panel.hidden = true;
+    return;
+  }
+  const url = `/output/${encodeURIComponent(name)}/${finalAudio}`;
+  document.getElementById("tts-final-audio-player").src = url;
+  document.getElementById("tts-final-audio-download").href = url;
+  panel.hidden = false;
 }
 
 function showAudioFiles(name, files) {

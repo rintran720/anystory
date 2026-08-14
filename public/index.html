@@ -112,6 +112,7 @@
 
   <div id="run-result" hidden>
     <button id="btn-view-story">Xem truyện</button>
+    <label>Khoảng lặng giữa các đoạn (ms) <input type="number" id="field-silence-gap" min="0" step="50"></label>
     <button id="btn-run-tts">Chạy TTS</button>
   </div>
 
@@ -125,6 +126,11 @@
     <div class="progress-bar"><div id="tts-progress-fill" class="progress-fill"></div></div>
     <p id="tts-status-text"></p>
     <pre id="tts-log"></pre>
+    <div id="tts-final-audio" hidden>
+      <h4>Audio đầy đủ (đã gộp)</h4>
+      <audio controls id="tts-final-audio-player"></audio>
+      <a id="tts-final-audio-download" download>Tải xuống</a>
+    </div>
     <div id="tts-audio-list"></div>
   </div>
 </section>

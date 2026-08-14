@@ -3,6 +3,9 @@ import json
 import sys
 from pathlib import Path
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--manifest", required=True)
 parser.add_argument("--voice", default="Ly")

@@ -61,6 +61,87 @@ function splitText(text: string, maxChars = 450) {
   return result;
 }
 
+interface WavInfo {
+  channels: number;
+  sampleRate: number;
+  bitsPerSample: number;
+  data: Buffer;
+}
+
+function parseWav(buf: Buffer, filePath: string): WavInfo {
+  if (buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WAVE") {
+    throw Error(`Not a valid WAV file: ${filePath}`);
+  }
+
+  let offset = 12;
+  let fmt: { channels: number; sampleRate: number; bitsPerSample: number } | null = null;
+  let data: Buffer | null = null;
+
+  while (offset + 8 <= buf.length) {
+    const chunkId = buf.toString("ascii", offset, offset + 4);
+    const chunkSize = buf.readUInt32LE(offset + 4);
+    const chunkStart = offset + 8;
+
+    if (chunkId === "fmt ") {
+      fmt = {
+        channels: buf.readUInt16LE(chunkStart + 2),
+        sampleRate: buf.readUInt32LE(chunkStart + 4),
+        bitsPerSample: buf.readUInt16LE(chunkStart + 14)
+      };
+    } else if (chunkId === "data") {
+      data = buf.subarray(chunkStart, chunkStart + chunkSize);
+    }
+
+    offset = chunkStart + chunkSize + (chunkSize % 2); // chunks are word-aligned
+  }
+
+  if (!fmt || !data) throw Error(`WAV file missing fmt/data chunk: ${filePath}`);
+  return { ...fmt, data };
+}
+
+function buildWavHeader(dataLength: number, channels: number, sampleRate: number, bitsPerSample: number): Buffer {
+  const blockAlign = channels * (bitsPerSample / 8);
+  const byteRate = sampleRate * blockAlign;
+  const header = Buffer.alloc(44);
+
+  header.write("RIFF", 0, "ascii");
+  header.writeUInt32LE(36 + dataLength, 4);
+  header.write("WAVE", 8, "ascii");
+  header.write("fmt ", 12, "ascii");
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20); // PCM
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36, "ascii");
+  header.writeUInt32LE(dataLength, 40);
+
+  return header;
+}
+
+async function concatWavFiles(audioFiles: string[], outputPath: string, silenceGapMs: number) {
+  const wavs = await Promise.all(
+    audioFiles.map(async f => parseWav(await fs.readFile(f), f))
+  );
+
+  const { channels, sampleRate, bitsPerSample } = wavs[0];
+  const bytesPerFrame = channels * (bitsPerSample / 8);
+  const silenceFrames = Math.max(0, Math.round((silenceGapMs / 1000) * sampleRate));
+  const silence = Buffer.alloc(silenceFrames * bytesPerFrame); // zeroed bytes = silence
+
+  const parts: Buffer[] = [];
+  wavs.forEach((w, i) => {
+    parts.push(w.data);
+    if (i < wavs.length - 1 && silenceFrames > 0) parts.push(silence);
+  });
+
+  const dataBuf = Buffer.concat(parts);
+  const header = buildWavHeader(dataBuf.length, channels, sampleRate, bitsPerSample);
+  await fs.writeFile(outputPath, Buffer.concat([header, dataBuf]));
+}
+
 async function createManifest(storyDir: string) {
   const ttsDir = path.join(storyDir, "tts");
   const manifestPath = path.join(ttsDir, "manifest.json");
@@ -109,6 +190,7 @@ export interface TTSOptions {
   refAudio: string;
   refText?: string;
   pipeOutput?: boolean;
+  silenceGapMs?: number;
 }
 
 export async function runTTS(
@@ -202,6 +284,12 @@ export async function runTTS(
     );
   });
 
+  const finalAudioPath = path.join(ttsDir, "final_audio.wav");
+  const audioFiles = segments.map(s => path.join(ttsDir, s.output));
+  console.log(`Merging ${audioFiles.length} segments (${opts.silenceGapMs ?? 500}ms gap)...`);
+  await concatWavFiles(audioFiles, finalAudioPath, opts.silenceGapMs ?? 500);
+  console.log(`Merged audio: ${finalAudioPath}`);
+
   onProgress?.({ type: "complete" });
   console.log(`TTS completed: ${ttsDir}`);
 }
@@ -219,7 +307,8 @@ async function main() {
     pythonCommand: config.tts.pythonCommand,
     voice: config.tts.voice,
     refAudio,
-    refText
+    refText,
+    silenceGapMs: config.tts.silenceGapMs
   });
 }
 
