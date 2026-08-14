@@ -104,6 +104,7 @@ function toggleProviderFields() {
   const provider = document.getElementById("field-provider").value;
   document.getElementById("settings-ollama").hidden = provider !== "ollama";
   document.getElementById("settings-deepseek").hidden = provider !== "deepseek";
+  document.getElementById("settings-claude").hidden = provider !== "claude";
 }
 
 async function openSettings() {
@@ -118,6 +119,7 @@ async function openSettings() {
   document.getElementById("field-deepseek-key").placeholder = data.deepseekApiKeySet
     ? "•••• đã lưu (để trống = giữ nguyên)"
     : "Chưa có key";
+  document.getElementById("field-claude-model").value = data.claudeModel;
   toggleProviderFields();
 }
 
@@ -129,7 +131,8 @@ document.getElementById("settings-form").addEventListener("submit", async ev => 
   const body = {
     provider: document.getElementById("field-provider").value,
     ollamaModel: document.getElementById("field-ollama-model").value.trim(),
-    deepseekModel: document.getElementById("field-deepseek-model").value
+    deepseekModel: document.getElementById("field-deepseek-model").value,
+    claudeModel: document.getElementById("field-claude-model").value
   };
   const apiKey = document.getElementById("field-deepseek-key").value.trim();
   if (apiKey) body.deepseekApiKey = apiKey;

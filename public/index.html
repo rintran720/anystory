@@ -68,6 +68,7 @@
       <select id="field-provider">
         <option value="ollama">Ollama (local)</option>
         <option value="deepseek">DeepSeek (cloud API)</option>
+        <option value="claude">Claude (Claude Code CLI trên máy, dùng subscription)</option>
       </select>
     </label>
 
@@ -81,6 +82,18 @@
         <select id="field-deepseek-model">
           <option value="deepseek-v4-flash">deepseek-v4-flash</option>
           <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="settings-claude" hidden>
+      <p class="hint">Dùng lệnh <code>claude</code> đã cài và đăng nhập sẵn trên máy (không cần API key riêng).</p>
+      <label>Model Claude
+        <select id="field-claude-model">
+          <option value="sonnet">sonnet (Sonnet 5, mặc định)</option>
+          <option value="opus">opus (Opus 5, mạnh hơn, chậm/tốn hơn)</option>
+          <option value="fable">fable (Fable 5)</option>
+          <option value="haiku">haiku (Haiku 4.5, nhanh/rẻ)</option>
         </select>
       </label>
     </div>

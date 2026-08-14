@@ -85,14 +85,15 @@ app.get("/api/settings", async (req, res) => {
     provider: overrides.provider ?? config.provider,
     ollamaModel: overrides.model ?? config.model,
     deepseekModel: overrides.deepseek?.model ?? config.deepseek.model,
-    deepseekApiKeySet: Boolean((overrides.deepseek?.apiKey ?? config.deepseek.apiKey).trim())
+    deepseekApiKeySet: Boolean((overrides.deepseek?.apiKey ?? config.deepseek.apiKey).trim()),
+    claudeModel: overrides.claude?.model ?? config.claude.model
   });
 });
 
 app.post("/api/settings", async (req, res) => {
-  const { provider, ollamaModel, deepseekModel, deepseekApiKey } = req.body ?? {};
-  if (provider !== "ollama" && provider !== "deepseek") {
-    return res.status(400).json({ error: "provider must be 'ollama' or 'deepseek'" });
+  const { provider, ollamaModel, deepseekModel, deepseekApiKey, claudeModel } = req.body ?? {};
+  if (provider !== "ollama" && provider !== "deepseek" && provider !== "claude") {
+    return res.status(400).json({ error: "provider must be 'ollama', 'deepseek', or 'claude'" });
   }
 
   const current = await loadSettingsOverrides();
@@ -100,7 +101,8 @@ app.post("/api/settings", async (req, res) => {
     provider,
     ollamaModel: (ollamaModel && String(ollamaModel).trim()) || current.model || config.model,
     deepseekApiKey: (deepseekApiKey && String(deepseekApiKey).trim()) || current.deepseek?.apiKey || "",
-    deepseekModel: (deepseekModel && String(deepseekModel).trim()) || current.deepseek?.model || config.deepseek.model
+    deepseekModel: (deepseekModel && String(deepseekModel).trim()) || current.deepseek?.model || config.deepseek.model,
+    claudeModel: (claudeModel && String(claudeModel).trim()) || current.claude?.model || config.claude.model
   };
 
   await fs.writeFile("settings.json.tmp", JSON.stringify(settings, null, 2), "utf8");
