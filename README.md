@@ -13,7 +13,9 @@ Critical tasks retry tối đa 3 lần:
 - Scene Writing
 - Chapter Editing
 
-Attempt 1 dùng temperature cấu hình; attempt 2 = 0.2; attempt 3 = 0.1.
+Với các tác vụ trả JSON (Story Bible, Outline, Chapter Plan): attempt 1 dùng temperature cấu hình; attempt 2 = 0.2; attempt 3 = 0.1 — hạ dần để model bám đúng định dạng JSON.
+
+Với các tác vụ trả văn bản truyện (Scene Writing, Chapter Editing): giữ nguyên temperature cấu hình ở cả 3 lần. Các lỗi ở đây (lỗi mạng/API, response rỗng, tràn `max_tokens`) không phải do temperature cao, mà hạ temperature khi viết văn dài lại đẩy model về decoding gần-greedy và dễ sinh lặp chữ.
 
 JSON được validate cả cú pháp lẫn các field quan trọng. Nếu tác vụ quan trọng vẫn fail sau 3 lần, chương trình dừng thay vì tạo story thiếu dữ liệu.
 
