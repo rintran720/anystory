@@ -444,6 +444,12 @@ function handleGenerateEvent(event) {
     setRunStatus(`Story Bible (${statusLabel(event.status)})`);
   } else if (event.type === "outline") {
     setRunStatus(`Outline (${statusLabel(event.status)})`);
+  } else if (event.type === "hook") {
+    setRunStatus(`Lời dẫn (${statusLabel(event.status)})`);
+  } else if (event.type === "outro") {
+    setRunStatus(`Lời kết (${statusLabel(event.status)})`);
+  } else if (event.type === "check") {
+    setRunStatus(`Rà soát continuity (${statusLabel(event.status)})`);
   } else if (event.type === "chapter") {
     const doneOffset = event.status === "done" || event.status === "cache" ? 0 : 1;
     setProgressFill(((event.chapter - doneOffset) / event.total) * 100);

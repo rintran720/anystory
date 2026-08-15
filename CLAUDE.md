@@ -21,14 +21,17 @@ There are no test or lint scripts. `tsc` is a dependency but not wired to a scri
 
 `generateStory(config, idea, outDir, onProgress?, shouldAbort?)` runs a fixed sequence of LLM calls, each stage caching its output to disk under `outDir` so a rerun resumes instead of regenerating. `onProgress` (optional) receives `ProgressEvent`s (`bible`/`outline`/`chapter`/`scene`/`edit`/`error`/`stopped`/`complete`, see `src/types.ts`) as each stage starts/caches/completes; `shouldAbort` (optional) is polled between steps and, if it returns true, aborts the run by throwing `Error("ABORTED")`. Both are used by `src/server.ts` to drive the web UI's live progress and stop button; the CLI (`src/index.ts`) calls `generateStory` without them.
 
-1. **Story Bible** (`story_bible.json`) — title/genre/theme/premise/tone/characters/setting/conflicts/ending, from the `ARCH` prompt.
-2. **Outline** (`outline.json`) — N chapters (`config.chapters`) via the `OUT` prompt, validated by `validateOutline`.
-3. Per chapter, per scene (`config.scenesPerChapter`):
-   - **Scene plan** via `SC` prompt, validated by `validateScenePlan`.
-   - **Scene draft** via `WR` prompt (`retryLLM`, not JSON — raw story text), appended to a running chapter draft. Last 6000 chars of the draft are passed back in as `RECENT` context for continuity.
-   - **Memory update** via `MEM` prompt after each scene — tracks `characterState`, `knownFacts`, `revealedSecrets`, `unresolvedQuestions`, `foreshadowing`, `lastChapterSummary`. Memory failures are logged and swallowed (non-critical); story-critical stages are not.
+1. **Story Bible** (`story_bible.json`) — title/genre/theme/premise/tone/characters/setting/conflicts/ending plus the craft fields `moral` (one-sentence thesis), `motif` (a concrete recurring prop and the chapter where its meaning inverts), `antagonistWound` (the antagonist's root wound and its reveal chapter), `escalationLadder` (8–12 concrete physical beats, each using a *different* mechanism) and `titleCandidates`, from the `ARCH` prompt. `moral`/`motif`/`escalationLadder` are validated as required; `antagonistWound`/`titleCandidates` are asked for but not enforced.
+2. **Outline** (`outline.json`) — N chapters (`config.chapters`) via the `OUT` prompt, validated by `validateOutline`. Each chapter additionally carries `povCharacter` (≥2 chapters must be seen from the antagonist's eyes), `escalationType` (unique per chapter, drawn from `escalationLadder`), a strictly increasing `pressureLevel`, and `protagonistAction` (what the protagonist actively *does* that chapter). `validateOutline` only enforces `chapter`/`title` — the rest is prompt-level, deliberately, to keep retries cheap on weak local models.
+3. **Hook** (`hook.txt`) — the ~180-word spoken intro ("lời dẫn") via the `HOOK` prompt: proverb → subversion → motif image → dramatic question → "Mời quý vị cùng lắng nghe." Cached like every other stage.
+4. Per chapter, per scene (`config.scenesPerChapter`):
+   - **Scene plan** via `SC` prompt, validated by `validateScenePlan`. Scenes also carry `povCharacter`, `pronounRegister` (`anh-em` / `tôi-cô` / `mày-tao` — the Vietnamese pronoun pair is the relationship thermometer), `signatureProp` (a named Vietnamese everyday object) and `newIncident` (one new physical event), the last two required to be unique within the chapter.
+   - **Scene draft** via `WR` prompt (`retryLLM`, not JSON — raw story text), appended to a running chapter draft. Last 6000 chars of the draft are passed back in as `RECENT` context for continuity, and `USED` carries `usedEmotionalBeats`/`usedEscalationTypes` from memory as an explicit do-not-repeat list.
+   - **Memory update** via `MEM` prompt after each scene — tracks `characterState`, `knownFacts`, `revealedSecrets`, `unresolvedQuestions`, `foreshadowing`, `lastChapterSummary`, plus `usedEmotionalBeats` (anti-repetition), `usedEscalationTypes` (stops the same escalation mechanism being reused), `motifOccurrences` and `timeline` (ages/elapsed time, so later scenes don't contradict earlier ones). Memory failures are logged and swallowed (non-critical); story-critical stages are not.
    - After all scenes: **chapter edit pass** via `EDIT` prompt, cleaned, and written to `chapter-<n>.txt`. Chapter files are the resume checkpoint — if `chapter-<n>.txt` already exists, the whole chapter (planning/writing/editing) is skipped.
-4. All chapter files are concatenated into `final_story.txt`.
+5. **Outro** (`outro.txt`) — the ~450-word spoken closer via the `OUTRO` prompt: final image → what stays open → a discussion question about a *grey* secondary character → restated `moral` with a fresh motif metaphor → comment CTA.
+6. `hook.txt` + all chapter files + `outro.txt` are concatenated into `final_story.txt`.
+7. **Continuity check** via the `CHECK` prompt over the assembled story, written to `continuity-report.json` (timeline contradictions, dropped threads, repeated emotional beats, flat characters, duplicated escalation mechanisms). Non-critical like `MEM` — a failure is warned about and the run still completes.
 
 Prompts (`src/prompts.ts`) are Vietnamese and instruct the model to output either strict JSON (no Markdown) or plain narration text (no Markdown, no meta-commentary like "Dưới đây là..."). `cleanGeneratedStory` (`src/utils.ts`) strips Markdown artifacts and stock LLM preambles from narrative output as a second line of defense.
 
@@ -39,7 +42,7 @@ Two retry wrappers around `askLLM`, both doing 3 attempts with temperature stepp
 - `askJSON` — expects JSON, uses `extractJSON` to strip code fences / find the outermost `{}`/`[]` if the model wraps the JSON in prose, then runs an optional `validate(x)` callback that throws on missing/malformed fields.
 - `retryLLM` — expects non-empty raw text (used for scene writing and chapter editing).
 
-Per the README: Story Bible, Outline, Chapter Plan, Scene Writing, and Chapter Editing are all critical — if they still fail after 3 attempts, the whole run aborts (no partial/corrupt story is written). Memory updates are the one non-critical stage that retries but doesn't abort the run on failure.
+Per the README: Story Bible, Outline, Hook, Chapter Plan, Scene Writing, Chapter Editing and Outro are all critical — if they still fail after 3 attempts, the whole run aborts (no partial/corrupt story is written). Memory updates and the continuity check are the non-critical stages that retry but don't abort the run on failure.
 
 ### TTS pipeline (`src/tts/index.ts` + `src/tts/worker.py`)
 
