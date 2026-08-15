@@ -1,4 +1,4 @@
-const state = { currentStoryName: null, generateSource: null, ttsSource: null, wordsPerMinute: 150, currentBible: null, currentOutline: null };
+const state = { currentStoryName: null, generateSource: null, ttsSource: null, jobsSource: null, activeJobsKey: "", wordsPerMinute: 150, currentBible: null, currentOutline: null };
 
 function suggestStructure(minutes, wpm) {
   const words = minutes * wpm;
@@ -61,10 +61,30 @@ async function loadIdeaFiles() {
   }
 }
 
+function selectedIdeaFiles() {
+  return [...document.getElementById("field-idea-file").selectedOptions].map(o => o.value);
+}
+
+function nameFromIdeaFile(file) {
+  return file.split("/").pop().replace(/\.txt$/i, "").trim();
+}
+
+function updateFileSelectionHint() {
+  const files = selectedIdeaFiles();
+  const hint = document.getElementById("file-selection-hint");
+  if (files.length < 2) {
+    hint.hidden = true;
+    return;
+  }
+  hint.textContent = `Sẽ tạo ${files.length} truyện: ${files.map(nameFromIdeaFile).join(", ")}`;
+  hint.hidden = false;
+}
+
 async function openCreateForm(prefillName) {
   document.getElementById("create-form").reset();
   document.getElementById("create-error").hidden = true;
   document.getElementById("suggest-hint").hidden = true;
+  document.getElementById("file-selection-hint").hidden = true;
   document.getElementById("field-run-until").value = "all";
   document.getElementById("field-chapter-limit-wrap").hidden = true;
   const nameField = document.getElementById("field-name");
@@ -81,6 +101,7 @@ async function openCreateForm(prefillName) {
 }
 
 document.getElementById("field-duration").addEventListener("input", suggestFromDuration);
+document.getElementById("field-idea-file").addEventListener("change", updateFileSelectionHint);
 
 document.getElementById("field-run-until").addEventListener("change", ev => {
   document.getElementById("field-chapter-limit-wrap").hidden = ev.target.value !== "chapters";
@@ -120,6 +141,7 @@ async function openSettings() {
     ? "•••• đã lưu (để trống = giữ nguyên)"
     : "Chưa có key";
   document.getElementById("field-claude-model").value = data.claudeModel;
+  document.getElementById("field-parallel").value = data.maxParallelStories;
   toggleProviderFields();
 }
 
@@ -132,7 +154,8 @@ document.getElementById("settings-form").addEventListener("submit", async ev => 
     provider: document.getElementById("field-provider").value,
     ollamaModel: document.getElementById("field-ollama-model").value.trim(),
     deepseekModel: document.getElementById("field-deepseek-model").value,
-    claudeModel: document.getElementById("field-claude-model").value
+    claudeModel: document.getElementById("field-claude-model").value,
+    maxParallelStories: document.getElementById("field-parallel").value || undefined
   };
   const apiKey = document.getElementById("field-deepseek-key").value.trim();
   if (apiKey) body.deepseekApiKey = apiKey;
@@ -164,17 +187,20 @@ async function loadHome() {
 
   for (const story of data.stories) {
     const tr = document.createElement("tr");
+    const busy = story.isRunning || story.isQueued;
     const statusText = story.isRunning
       ? "Đang chạy"
-      : story.hasFinalStory
-        ? (story.hasAudio ? "Hoàn tất + Audio" : "Hoàn tất")
-        : `Đã xong ${story.completedChapters}/${story.totalChapters || "?"} chương`;
-    const actionLabel = story.isRunning ? "Xem tiến trình" : (story.hasFinalStory ? "Xem" : "Tiếp tục");
+      : story.isQueued
+        ? "Đang chờ trong hàng đợi"
+        : story.hasFinalStory
+          ? (story.hasAudio ? "Hoàn tất + Audio" : "Hoàn tất")
+          : `Đã xong ${story.completedChapters}/${story.totalChapters || "?"} chương`;
+    const actionLabel = busy ? "Xem tiến trình" : (story.hasFinalStory ? "Xem" : "Tiếp tục");
 
     tr.innerHTML = `
       <td></td>
       <td>${statusText}</td>
-      <td><button data-resume="${!story.isRunning && !story.hasFinalStory}">${actionLabel}</button></td>
+      <td><button data-resume="${!busy && !story.hasFinalStory}">${actionLabel}</button></td>
     `;
     tr.querySelector("td").textContent = story.name;
     tr.querySelector("button").dataset.name = story.name;
@@ -193,6 +219,56 @@ async function loadHome() {
   });
 }
 
+function renderJobs(payload) {
+  const active = payload.jobs.filter(j => j.status === "running" || j.status === "queued");
+  const panel = document.getElementById("jobs-panel");
+  const list = document.getElementById("jobs-list");
+
+  document.getElementById("jobs-summary").textContent =
+    `(${payload.running}/${payload.maxParallelStories} chạy song song, ${active.length - payload.running} đang chờ)`;
+  panel.hidden = active.length === 0;
+  list.innerHTML = "";
+
+  for (const job of active) {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong></strong> <span></span> <button data-open>Xem</button> <button data-stop>Dừng</button>`;
+    li.querySelector("strong").textContent = job.name;
+    li.querySelector("span").textContent = job.status === "running" ? "đang chạy" : `chờ #${job.position}`;
+    li.querySelector("[data-open]").addEventListener("click", () => openStory(job.name));
+    li.querySelector("[data-stop]").addEventListener("click", () => stopJob(job.name));
+    list.appendChild(li);
+  }
+
+  // Job vừa xong/lỗi thì bảng truyện đã cũ — chỉ tải lại khi tập job đang hoạt động đổi.
+  const key = active.map(j => `${j.name}:${j.status}`).join("|");
+  if (key !== state.activeJobsKey) {
+    state.activeJobsKey = key;
+    loadHome();
+  }
+}
+
+function connectJobsStream() {
+  const source = new EventSource("/api/jobs/stream");
+  state.jobsSource = source;
+  source.onmessage = ev => renderJobs(JSON.parse(ev.data));
+}
+
+async function stopJob(name) {
+  await fetch("/api/generate/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+}
+
+document.getElementById("btn-stop-all").addEventListener("click", async () => {
+  await fetch("/api/generate/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ all: true })
+  });
+});
+
 function showCreateError(message) {
   const el = document.getElementById("create-error");
   el.textContent = message || "Đã có lỗi xảy ra.";
@@ -208,7 +284,6 @@ document.getElementById("create-form").addEventListener("submit", async ev => {
 
   const runUntil = document.getElementById("field-run-until").value;
   const body = {
-    name,
     chapters: document.getElementById("field-chapters").value || undefined,
     scenesPerChapter: document.getElementById("field-scenes").value || undefined,
     durationMinutes: document.getElementById("field-duration").value || undefined,
@@ -217,9 +292,25 @@ document.getElementById("create-form").addEventListener("submit", async ev => {
   };
 
   if (activeTab === "paste") {
+    if (!name) {
+      showCreateError("Nhập tên truyện.");
+      return;
+    }
+    body.name = name;
     body.idea = document.getElementById("field-idea").value.trim();
   } else {
-    body.ideaFile = document.getElementById("field-idea-file").value;
+    const files = selectedIdeaFiles();
+    if (files.length === 0) {
+      showCreateError("Chọn ít nhất một file ý tưởng.");
+      return;
+    }
+    if (files.length === 1) {
+      body.name = name || nameFromIdeaFile(files[0]);
+      body.ideaFile = files[0];
+    } else {
+      // Mỗi file là một truyện riêng, dùng chung cấu hình ở trên.
+      body.items = files.map(file => ({ name: nameFromIdeaFile(file), ideaFile: file }));
+    }
   }
 
   const res = await fetch("/api/generate", {
@@ -234,8 +325,25 @@ document.getElementById("create-form").addEventListener("submit", async ev => {
     return;
   }
 
-  openStory(name);
+  showHomeMessage(data.failed);
+  if (data.names.length === 1) {
+    openStory(data.names[0]);
+  } else {
+    await loadHome();
+    show("view-home");
+  }
 });
+
+function showHomeMessage(failed) {
+  const el = document.getElementById("home-message");
+  if (!failed || failed.length === 0) {
+    el.hidden = true;
+    return;
+  }
+  el.className = "error";
+  el.textContent = `Bỏ qua ${failed.length} truyện: ${failed.map(f => `${f.name} (${f.error})`).join("; ")}`;
+  el.hidden = false;
+}
 
 async function openStory(name) {
   closeStreams();
@@ -328,7 +436,11 @@ function handleGenerateEvent(event) {
   }
   appendLog("run-log", `[${event.type}] ${JSON.stringify(event)}`);
 
-  if (event.type === "bible") {
+  if (event.type === "queued") {
+    setRunStatus(`Đang chờ trong hàng đợi (vị trí ${event.position})`);
+  } else if (event.type === "started") {
+    setRunStatus("Bắt đầu chạy...");
+  } else if (event.type === "bible") {
     setRunStatus(`Story Bible (${statusLabel(event.status)})`);
   } else if (event.type === "outline") {
     setRunStatus(`Outline (${statusLabel(event.status)})`);
@@ -371,7 +483,7 @@ function showRetryButton() {
 }
 
 document.getElementById("btn-stop").addEventListener("click", async () => {
-  await fetch("/api/generate/stop", { method: "POST" });
+  await stopJob(state.currentStoryName);
 });
 
 document.getElementById("btn-view-story").addEventListener("click", async () => {
@@ -472,4 +584,5 @@ function showAudioFiles(name, files) {
 }
 
 loadHome();
+connectJobsStream();
 show("view-home");

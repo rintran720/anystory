@@ -6,7 +6,7 @@ import { exists } from "./utils.js";
 import { generateStory } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
-import type { ProgressEvent, TtsProgressEvent, RunUntil } from "./types.js";
+import type { ProgressEvent, TtsProgressEvent, RunUntil, JobStatus, JobSummary } from "./types.js";
 import type { Config } from "./types.js";
 
 const app = express();
@@ -21,13 +21,77 @@ function resolveUnder(root: string, name: string): string | null {
 
 interface GenerateJob {
   name: string;
-  status: "running" | "done" | "error" | "stopped";
+  status: JobStatus;
   events: ProgressEvent[];
   abortRequested: boolean;
   error?: string;
+  start: () => Promise<void>;
 }
-let generateJob: GenerateJob | null = null;
+
+// Nhiều truyện chạy song song: mỗi truyện là một job độc lập (ghi vào output/<name>/
+// riêng), lên lịch FIFO với trần maxParallelStories. Mỗi job chỉ gọi LLM tuần tự nên
+// số request LLM đồng thời đúng bằng số job đang chạy.
+const generateJobs = new Map<string, GenerateJob>();
+const jobQueue: string[] = [];
 const progressEmitter = new EventEmitter();
+const jobsEmitter = new EventEmitter();
+progressEmitter.setMaxListeners(0);
+jobsEmitter.setMaxListeners(0);
+let maxParallelStories = config.maxParallelStories;
+
+function pushEvent(job: GenerateJob, event: ProgressEvent) {
+  job.events.push(event);
+  progressEmitter.emit("generate", { jobName: job.name, event });
+}
+
+function runningCount(): number {
+  let n = 0;
+  for (const job of generateJobs.values()) if (job.status === "running") n++;
+  return n;
+}
+
+function jobSummaries(): JobSummary[] {
+  return [...generateJobs.values()].map(job => ({
+    name: job.name,
+    status: job.status,
+    position: job.status === "queued" ? jobQueue.indexOf(job.name) + 1 : 0,
+    error: job.error
+  }));
+}
+
+function emitJobs() {
+  jobsEmitter.emit("jobs", jobSummaries());
+}
+
+function pump() {
+  while (jobQueue.length > 0 && runningCount() < maxParallelStories) {
+    const name = jobQueue.shift()!;
+    const job = generateJobs.get(name);
+    if (!job || job.status !== "queued") continue;
+    job.status = "running";
+    pushEvent(job, { type: "started" });
+    job.start().finally(() => {
+      emitJobs();
+      pump();
+    });
+  }
+  emitJobs();
+}
+
+function stopJob(job: GenerateJob): boolean {
+  if (job.status === "queued") {
+    const i = jobQueue.indexOf(job.name);
+    if (i >= 0) jobQueue.splice(i, 1);
+    job.status = "stopped";
+    pushEvent(job, { type: "stopped" });
+    return true;
+  }
+  if (job.status === "running") {
+    job.abortRequested = true;
+    return true;
+  }
+  return false;
+}
 
 interface TTSJob {
   name: string;
@@ -37,6 +101,18 @@ interface TTSJob {
 }
 let ttsJob: TTSJob | null = null;
 const ttsEmitter = new EventEmitter();
+
+function openSSE(res: express.Response) {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  return (data: unknown) => {
+    try {
+      if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {}
+  };
+}
 
 // --- routes ---
 
@@ -86,7 +162,8 @@ app.get("/api/settings", async (req, res) => {
     ollamaModel: overrides.model ?? config.model,
     deepseekModel: overrides.deepseek?.model ?? config.deepseek.model,
     deepseekApiKeySet: Boolean((overrides.deepseek?.apiKey ?? config.deepseek.apiKey).trim()),
-    claudeModel: overrides.claude?.model ?? config.claude.model
+    claudeModel: overrides.claude?.model ?? config.claude.model,
+    maxParallelStories: overrides.maxParallelStories ?? config.maxParallelStories
   });
 });
 
@@ -97,16 +174,24 @@ app.post("/api/settings", async (req, res) => {
   }
 
   const current = await loadSettingsOverrides();
+  const parallel = Number(req.body?.maxParallelStories);
   const settings = {
     provider,
     ollamaModel: (ollamaModel && String(ollamaModel).trim()) || current.model || config.model,
     deepseekApiKey: (deepseekApiKey && String(deepseekApiKey).trim()) || current.deepseek?.apiKey || "",
     deepseekModel: (deepseekModel && String(deepseekModel).trim()) || current.deepseek?.model || config.deepseek.model,
-    claudeModel: (claudeModel && String(claudeModel).trim()) || current.claude?.model || config.claude.model
+    claudeModel: (claudeModel && String(claudeModel).trim()) || current.claude?.model || config.claude.model,
+    maxParallelStories: Number.isFinite(parallel) && parallel >= 1
+      ? Math.min(16, Math.floor(parallel))
+      : current.maxParallelStories ?? config.maxParallelStories
   };
 
   await fs.writeFile("settings.json.tmp", JSON.stringify(settings, null, 2), "utf8");
   await fs.rename("settings.json.tmp", "settings.json");
+
+  // Áp dụng trần song song ngay lập tức: nâng lên thì job đang chờ chạy luôn.
+  maxParallelStories = settings.maxParallelStories;
+  pump();
   res.json({ saved: true });
 });
 
@@ -127,15 +212,15 @@ app.get("/api/stories", async (req, res) => {
       const hasAudio = (await exists(audioDir)) &&
         (await fs.readdir(audioDir)).some(f => f.endsWith(".wav"));
 
-      const job = generateJob as GenerateJob | null;
-      const isRunning = job !== null && job.name === e.name && job.status === "running";
+      const jobStatus = generateJobs.get(e.name)?.status ?? null;
       return {
         name: e.name,
         totalChapters,
         completedChapters,
         hasFinalStory,
         hasAudio,
-        isRunning
+        isRunning: jobStatus === "running",
+        isQueued: jobStatus === "queued"
       };
     })
   );
@@ -161,115 +246,149 @@ app.get("/api/stories/:name", async (req, res) => {
   res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio });
 });
 
+type QueueResult =
+  | { ok: true; name: string }
+  | { ok: false; name: string; status: number; error: string };
+
+async function queueGenerateJob(input: any): Promise<QueueResult> {
+  const rawName = input?.name;
+  if (!rawName || typeof rawName !== "string" || !rawName.trim()) {
+    return { ok: false, name: String(rawName ?? ""), status: 400, error: "name is required" };
+  }
+  const name = rawName.trim();
+
+  const existing = generateJobs.get(name);
+  if (existing && (existing.status === "queued" || existing.status === "running")) {
+    return { ok: false, name, status: 409, error: `"${name}" đang chạy hoặc đang chờ trong hàng đợi` };
+  }
+
+  const outDir = resolveUnder(path.resolve("output"), name);
+  if (!outDir) return { ok: false, name, status: 400, error: "invalid name" };
+  const bibleExists = await exists(path.join(outDir, "story_bible.json"));
+
+  let ideaText = "";
+  if (input.idea && String(input.idea).trim()) {
+    ideaText = String(input.idea).trim();
+  } else if (input.ideaFile) {
+    const ideaPath = resolveUnder(path.resolve("stories"), String(input.ideaFile));
+    if (!ideaPath) return { ok: false, name, status: 400, error: "invalid ideaFile path" };
+    if (!(await exists(ideaPath))) return { ok: false, name, status: 400, error: `idea file not found: ${input.ideaFile}` };
+    ideaText = (await fs.readFile(ideaPath, "utf8")).trim();
+  } else if (!bibleExists) {
+    return { ok: false, name, status: 400, error: "idea or ideaFile is required for a new story" };
+  }
+
+  const settingsOverrides = await loadSettingsOverrides();
+  const baseConfig = { ...config, ...settingsOverrides };
+  maxParallelStories = baseConfig.maxParallelStories;
+  const jobConfig: Config = {
+    ...baseConfig,
+    chapters: input.chapters ? Number(input.chapters) : baseConfig.chapters,
+    scenesPerChapter: input.scenesPerChapter ? Number(input.scenesPerChapter) : baseConfig.scenesPerChapter,
+    durationMinutes: input.durationMinutes ? Number(input.durationMinutes) : baseConfig.durationMinutes
+  };
+
+  let runUntilArg: RunUntil | undefined;
+  if (input.runUntil === "bible") runUntilArg = { stage: "bible" };
+  else if (input.runUntil === "outline") runUntilArg = { stage: "outline" };
+  else if (input.runUntil === "chapters") {
+    runUntilArg = { stage: "chapters", chapterLimit: input.chapterLimit ? Number(input.chapterLimit) : undefined };
+  }
+
+  const job: GenerateJob = { name, status: "queued", events: [], abortRequested: false, start: async () => {} };
+  job.start = async () => {
+    try {
+      await generateStory(jobConfig, ideaText, outDir, e => pushEvent(job, e), () => job.abortRequested, runUntilArg);
+      job.status = "done";
+    } catch (err: any) {
+      if (err?.message === "ABORTED") {
+        job.status = "stopped";
+        pushEvent(job, { type: "stopped" });
+      } else {
+        job.status = "error";
+        job.error = String(err?.message ?? err);
+        pushEvent(job, { type: "error", message: job.error });
+      }
+    }
+  };
+
+  generateJobs.set(name, job);
+  jobQueue.push(name);
+  pushEvent(job, { type: "queued", position: jobQueue.length });
+  return { ok: true, name };
+}
+
+// Nhận một truyện ({name, idea|ideaFile, ...}) hoặc nhiều truyện cùng lúc
+// ({items: [...], ...cấu hình dùng chung}).
 app.post("/api/generate", async (req, res) => {
-  const { name, idea, ideaFile, chapters, scenesPerChapter, durationMinutes, runUntil, chapterLimit } = req.body ?? {};
+  const body = req.body ?? {};
+  const items: any[] = Array.isArray(body.items) && body.items.length > 0 ? body.items : [body];
+  const shared = {
+    chapters: body.chapters,
+    scenesPerChapter: body.scenesPerChapter,
+    durationMinutes: body.durationMinutes,
+    runUntil: body.runUntil,
+    chapterLimit: body.chapterLimit
+  };
 
-  if (!name || typeof name !== "string" || !name.trim()) {
-    return res.status(400).json({ error: "name is required" });
+  const queued: string[] = [];
+  const failed: { name: string; error: string; status: number }[] = [];
+  for (const item of items) {
+    const result = await queueGenerateJob({ ...shared, ...item });
+    if (result.ok) queued.push(result.name);
+    else failed.push({ name: result.name, error: result.error, status: result.status });
   }
-  if (generateJob && generateJob.status === "running") {
-    return res.status(409).json({ error: `A generate job is already running: ${generateJob.name}` });
+  pump();
+
+  if (queued.length === 0) {
+    const first = failed[0];
+    return res.status(first?.status ?? 400).json({ error: first?.error ?? "Không tạo được job nào", failed });
   }
-
-  const job: GenerateJob = { name: name.trim(), status: "running", events: [], abortRequested: false };
-  generateJob = job;
-
-  try {
-    const outDir = resolveUnder(path.resolve("output"), name.trim());
-    if (!outDir) {
-      generateJob = null;
-      return res.status(400).json({ error: "invalid name" });
-    }
-    const bibleExists = await exists(path.join(outDir, "story_bible.json"));
-
-    let ideaText = "";
-    if (idea && String(idea).trim()) {
-      ideaText = String(idea).trim();
-    } else if (ideaFile) {
-      const ideaPath = resolveUnder(path.resolve("stories"), String(ideaFile));
-      if (!ideaPath) {
-        generateJob = null;
-        return res.status(400).json({ error: "invalid ideaFile path" });
-      }
-      if (!(await exists(ideaPath))) {
-        generateJob = null;
-        return res.status(400).json({ error: "idea file not found" });
-      }
-      ideaText = (await fs.readFile(ideaPath, "utf8")).trim();
-    } else if (!bibleExists) {
-      generateJob = null;
-      return res.status(400).json({ error: "idea or ideaFile is required for a new story" });
-    }
-
-    const settingsOverrides = await loadSettingsOverrides();
-    const baseConfig = { ...config, ...settingsOverrides };
-    const jobConfig: Config = {
-      ...baseConfig,
-      chapters: chapters ? Number(chapters) : baseConfig.chapters,
-      scenesPerChapter: scenesPerChapter ? Number(scenesPerChapter) : baseConfig.scenesPerChapter,
-      durationMinutes: durationMinutes ? Number(durationMinutes) : baseConfig.durationMinutes
-    };
-
-    const pushEvent = (e: ProgressEvent) => {
-      job.events.push(e);
-      progressEmitter.emit("generate", { jobName: job.name, event: e });
-    };
-
-    let runUntilArg: RunUntil | undefined;
-    if (runUntil === "bible") runUntilArg = { stage: "bible" };
-    else if (runUntil === "outline") runUntilArg = { stage: "outline" };
-    else if (runUntil === "chapters") runUntilArg = { stage: "chapters", chapterLimit: chapterLimit ? Number(chapterLimit) : undefined };
-
-    (async () => {
-      try {
-        await generateStory(jobConfig, ideaText, outDir, pushEvent, () => job.abortRequested, runUntilArg);
-        job.status = "done";
-      } catch (err: any) {
-        if (err?.message === "ABORTED") {
-          job.status = "stopped";
-          pushEvent({ type: "stopped" });
-        } else {
-          job.status = "error";
-          job.error = String(err?.message ?? err);
-          pushEvent({ type: "error", message: job.error });
-        }
-      }
-    })();
-
-    res.json({ started: true, name: job.name });
-  } catch (e: any) {
-    generateJob = null;
-    return res.status(500).json({ error: String(e?.message ?? e) });
-  }
+  res.json({ started: true, names: queued, failed, running: runningCount(), maxParallelStories });
 });
 
 app.post("/api/generate/stop", (req, res) => {
-  if (!generateJob || generateJob.status !== "running") {
-    return res.status(409).json({ error: "No generate job is running" });
+  const { name, all } = req.body ?? {};
+
+  if (all) {
+    const stopping = [...generateJobs.values()].filter(job => stopJob(job)).map(job => job.name);
+    emitJobs();
+    pump();
+    return res.json({ stopping });
   }
-  generateJob.abortRequested = true;
-  res.json({ stopping: true });
+
+  if (!name) return res.status(400).json({ error: "name is required" });
+  const job = generateJobs.get(String(name));
+  if (!job || !stopJob(job)) return res.status(409).json({ error: `"${name}" không đang chạy hoặc chờ` });
+  emitJobs();
+  pump();
+  res.json({ stopping: [job.name] });
+});
+
+app.get("/api/jobs", (req, res) => {
+  res.json({ jobs: jobSummaries(), running: runningCount(), maxParallelStories });
+});
+
+app.get("/api/jobs/stream", (req, res) => {
+  const safeWrite = openSSE(res);
+  const send = (jobs: JobSummary[]) => safeWrite({ jobs, running: runningCount(), maxParallelStories });
+
+  send(jobSummaries());
+  jobsEmitter.on("jobs", send);
+  req.on("close", () => jobsEmitter.off("jobs", send));
 });
 
 app.get("/api/generate/stream", (req, res) => {
   const name = String(req.query.name ?? "");
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
+  const safeWrite = openSSE(res);
 
-  const safeWrite = (data: unknown) => {
-    try {
-      if (!res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
-    } catch {}
-  };
-
-  if (!generateJob || generateJob.name !== name) {
+  const job = generateJobs.get(name);
+  if (!job) {
     safeWrite({ type: "idle" });
     return res.end();
   }
 
-  for (const e of generateJob.events) {
+  for (const e of job.events) {
     safeWrite(e);
   }
 

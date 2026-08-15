@@ -1,10 +1,35 @@
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+
+def _register_ffmpeg_dlls():
+    """Make the shared-build FFmpeg DLLs loadable regardless of the inherited PATH.
+
+    torchaudio.load() decodes through torchcodec, which ctypes-loads
+    libtorchcodec_core*.dll; those need avcodec/avformat/avutil... next to them on the
+    DLL search path. scripts/install-ffmpeg-shared.ps1 puts them on the *User* PATH, but
+    any process started before that (VSCode, and the `npm start` server plus this worker
+    spawned from it) still carries the old PATH, so the load fails. Registering the
+    directory explicitly removes that dependency on when the parent process started.
+    """
+    if sys.platform != "win32":
+        return
+    root = Path(os.environ.get("FFMPEG_SHARED_DIR") or
+                Path(os.environ.get("LOCALAPPDATA", "")) / "ffmpeg-shared")
+    if not root.is_dir():
+        return
+    for dll in root.rglob("avcodec-*.dll"):
+        os.add_dll_directory(str(dll.parent))
+        return
+
+
+_register_ffmpeg_dlls()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--manifest", required=True)

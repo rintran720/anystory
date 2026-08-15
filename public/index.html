@@ -11,6 +11,15 @@
 <section id="view-home">
   <button id="btn-new-story">+ Tạo truyện mới</button>
   <button id="btn-settings">⚙️ Cài đặt</button>
+
+  <p id="home-message" hidden></p>
+
+  <div id="jobs-panel" hidden>
+    <h3>Đang chạy / hàng đợi <span id="jobs-summary" class="hint"></span></h3>
+    <ul id="jobs-list"></ul>
+    <button id="btn-stop-all">Dừng tất cả</button>
+  </div>
+
   <table id="story-table">
     <thead><tr><th>Tên</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
     <tbody id="story-table-body"></tbody>
@@ -21,7 +30,8 @@
   <button class="btn-back" data-target="view-home">&larr; Quay lại</button>
   <h2>Tạo truyện mới</h2>
   <form id="create-form">
-    <label>Tên truyện <input type="text" id="field-name" required></label>
+    <label>Tên truyện <input type="text" id="field-name"></label>
+    <p class="hint">Chọn nhiều file ý tưởng ở tab bên dưới để tạo nhiều truyện cùng lúc — khi đó tên lấy theo tên file.</p>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="paste">Dán text</button>
@@ -31,7 +41,8 @@
       <label>Ý tưởng (bỏ trống nếu truyện đã có Story Bible và bạn chỉ muốn tiếp tục) <textarea id="field-idea" rows="8"></textarea></label>
     </div>
     <div id="tab-file" class="tab-panel" hidden>
-      <label>File có sẵn <select id="field-idea-file"></select></label>
+      <label>File có sẵn (giữ Ctrl/Shift để chọn nhiều) <select id="field-idea-file" multiple size="8"></select></label>
+      <p id="file-selection-hint" class="hint" hidden></p>
     </div>
 
     <fieldset>
@@ -97,6 +108,9 @@
         </select>
       </label>
     </div>
+
+    <label>Số truyện chạy song song <input type="number" id="field-parallel" min="1" max="16"></label>
+    <p class="hint">Ollama local nên để 1 (model chạy tuần tự). DeepSeek/Claude có thể 3–8 tuỳ giới hạn tài khoản và RAM. Đổi số này áp dụng ngay, job đang chờ sẽ chạy tiếp.</p>
 
     <p id="settings-message" hidden></p>
     <button type="submit">Lưu</button>
