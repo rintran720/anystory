@@ -384,9 +384,13 @@ async function refreshReviewPanel(name) {
   const data = await res.json();
   state.currentBible = data.bible;
   state.currentOutline = data.outline;
+  state.currentReview = await fetch(`/output/${encodeURIComponent(name)}/review-report.json`)
+    .then(r => (r.ok ? r.json() : null))
+    .catch(() => null);
   document.getElementById("review-panel").hidden = !data.bible && !data.outline;
   document.getElementById("btn-view-bible").hidden = !data.bible;
   document.getElementById("btn-view-outline").hidden = !data.outline;
+  document.getElementById("btn-view-review").hidden = !state.currentReview;
 }
 
 document.getElementById("btn-view-bible").addEventListener("click", () => {
@@ -398,6 +402,12 @@ document.getElementById("btn-view-bible").addEventListener("click", () => {
 document.getElementById("btn-view-outline").addEventListener("click", () => {
   const el = document.getElementById("outline-text");
   el.textContent = JSON.stringify(state.currentOutline, null, 2);
+  el.hidden = false;
+});
+
+document.getElementById("btn-view-review").addEventListener("click", () => {
+  const el = document.getElementById("review-text");
+  el.textContent = JSON.stringify(state.currentReview, null, 2);
   el.hidden = false;
 });
 
@@ -450,6 +460,10 @@ function handleGenerateEvent(event) {
     setRunStatus(`Lời kết (${statusLabel(event.status)})`);
   } else if (event.type === "check") {
     setRunStatus(`Rà soát continuity (${statusLabel(event.status)})`);
+  } else if (event.type === "review") {
+    setRunStatus(event.chapter
+      ? `Chấm điểm chương ${event.chapter}/${event.total} (${statusLabel(event.status)})`
+      : `Chấm điểm truyện (${statusLabel(event.status)})`);
   } else if (event.type === "chapter") {
     const doneOffset = event.status === "done" || event.status === "cache" ? 0 : 1;
     setProgressFill(((event.chapter - doneOffset) / event.total) * 100);
