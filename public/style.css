@@ -122,3 +122,14 @@ button[disabled]:hover { opacity: 0.4; }
 #review-actions .hint { margin-top: 8px; }
 #task-model-row { display: flex; gap: 12px; margin-bottom: 10px; }
 #task-model-row label { flex: 1; margin-bottom: 0; }
+.warn { color: #e8c07a; font-size: 13px; margin: 8px 0; line-height: 1.5; }
+.badge-stale { background: #46381d; color: #e8c07a; }
+.row-stale td { opacity: 0.65; }
+
+#fix-selection-bar { position: sticky; bottom: 0; background: var(--panel); border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px 14px; margin-top: 16px; }
+#fix-selection-count { margin: 0 0 10px; font-size: 14px; }
+#fix-selection-controls { display: flex; gap: 12px; margin-bottom: 10px; }
+#fix-selection-controls label { flex: 1; font-size: 13px; color: var(--text-dim); }
+.issue-pick { display: flex; gap: 8px; align-items: flex-start; }
+.issue-pick input { margin-top: 3px; }
+.issue-card.picked { border-left-color: var(--accent); }

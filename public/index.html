@@ -42,6 +42,8 @@
   <h3>Lỗi cần sửa trước</h3>
   <div id="review-top-issues"></div>
 
+  <p class="warn" id="review-stale-note" hidden></p>
+
   <h3>Điểm từng chương</h3>
   <p class="hint">Bấm vào một chương để xem chi tiết lỗi. Điểm ≤5 là hỏng, 6 là nhạt, ≥7 là nghe được.</p>
   <table id="review-chapter-table">
@@ -49,6 +51,23 @@
     <tbody id="review-chapter-body"></tbody>
   </table>
   <div id="review-chapter-detail"></div>
+
+  <div id="fix-selection-bar" hidden>
+    <p id="fix-selection-count"></p>
+    <div id="fix-selection-controls">
+      <label>Chạy bằng
+        <select id="field-sel-provider">
+          <option value="">(theo cài đặt)</option>
+          <option value="ollama">Ollama (local)</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="claude">Claude</option>
+        </select>
+      </label>
+      <label>Model <select id="field-sel-model"></select></label>
+    </div>
+    <button id="btn-fix-selected">Sửa các lỗi đã chọn</button>
+    <button id="btn-clear-selection" class="btn-secondary">Bỏ chọn hết</button>
+  </div>
 </section>
 
 <section id="view-create" hidden>
@@ -176,6 +195,7 @@
         </label>
         <label>Model <select id="field-task-model"></select></label>
       </div>
+      <p class="warn" id="review-actions-warning" hidden></p>
       <button id="btn-review">Chấm điểm truyện</button>
       <button id="btn-fix">Sửa chương</button>
       <p class="hint" id="review-actions-hint"></p>

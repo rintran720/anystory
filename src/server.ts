@@ -141,6 +141,30 @@ async function readJSONIfExists(file: string): Promise<any> {
   }
 }
 
+// Chương nào đã viết lại sau lần chấm điểm gần nhất áp dụng cho nó. Mốc so là
+// review-report.generatedAt, trừ chương được stage FIX sửa và giữ lại - chương đó đã
+// được chấm lại ngay trong stage FIX nên mốc của nó là fix-report.generatedAt.
+async function staleReviewChapters(dir: string, review: any, fixReport: any): Promise<number[]> {
+  if (!review?.generatedAt) return [];
+  const reviewedAt = Date.parse(review.generatedAt);
+  const fixedAt = Date.parse(fixReport?.generatedAt ?? "");
+  const keptFixes = new Set(
+    ((fixReport?.fixes ?? []) as any[]).filter(f => f.kept).map(f => f.chapter)
+  );
+
+  const stale: number[] = [];
+  for (const entry of (review.chapters ?? []) as any[]) {
+    const file = path.join(dir, `chapter-${entry.chapter}.txt`);
+    const stat = await fs.stat(file).catch(() => null);
+    if (!stat) continue;
+    const scoredAt = keptFixes.has(entry.chapter) && Number.isFinite(fixedAt)
+      ? Math.max(reviewedAt, fixedAt)
+      : reviewedAt;
+    if (stat.mtimeMs > scoredAt) stale.push(entry.chapter);
+  }
+  return stale;
+}
+
 app.get("/api/ideas", async (req, res) => {
   const dir = path.resolve("stories");
   const files = (await exists(dir)) ? await findIdeaFiles(dir) : [];
@@ -227,6 +251,9 @@ app.get("/api/stories", async (req, res) => {
         (await fs.readdir(audioDir)).some(f => f.endsWith(".wav"));
 
       const review = await readJSONIfExists(path.join(dir, "review-report.json"));
+      const staleCount = review
+        ? (await staleReviewChapters(dir, review, await readJSONIfExists(path.join(dir, "fix-report.json")))).length
+        : 0;
 
       const jobStatus = generateJobs.get(e.name)?.status ?? null;
       return {
@@ -237,6 +264,7 @@ app.get("/api/stories", async (req, res) => {
         hasAudio,
         hasReview: Boolean(review),
         reviewScore: review?.summary?.overall ?? null,
+        staleChapters: staleCount,
         isRunning: jobStatus === "running",
         isQueued: jobStatus === "queued"
       };
@@ -265,9 +293,10 @@ app.get("/api/stories/:name", async (req, res) => {
   const fixReport = await readJSONIfExists(path.join(dir, "fix-report.json"));
 
   const needsFixChapters = ((review?.chapters ?? []) as any[]).filter(needsFix).map(r => r.chapter);
+  const staleChapters = await staleReviewChapters(dir, review, fixReport);
   const completedChapters = (await fs.readdir(dir).catch(() => [])).filter(f => /^chapter-\d+\.txt$/.test(f)).length;
 
-  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio, review, fixReport, needsFixChapters, completedChapters });
+  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio, review, fixReport, needsFixChapters, staleChapters, completedChapters });
 });
 
 type QueueResult =
@@ -345,7 +374,7 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
 // Chấm điểm và sửa chương chạy như job bình thường, nên dùng lại được cả hàng đợi,
 // SSE, nút Dừng và trần maxParallelStories. force=true: bấm nút là chạy lại thật,
 // cache theo file chỉ còn phục vụ đường tự động cuối generateStory.
-async function queueStoryTask(rawName: string, kind: "review" | "fix", override: { provider?: string; model?: string } = {}) {
+async function queueStoryTask(rawName: string, kind: "review" | "fix", override: { provider?: string; model?: string; selection?: Record<string, number[]> } = {}) {
   const name = String(rawName ?? "").trim();
   if (!name) return { ok: false as const, status: 400, error: "name is required" };
 
@@ -393,12 +422,26 @@ async function queueStoryTask(rawName: string, kind: "review" | "fix", override:
     : jobConfig.provider === "claude" ? jobConfig.claude.model
     : jobConfig.model;
 
+  // Chọn lỗi trên màn hình báo cáo: {"<chương>": [thứ tự lỗi trong review-report]}.
+  let selection: Record<string, number[]> | null = null;
+  if (kind === "fix" && override.selection && Object.keys(override.selection).length) {
+    selection = {};
+    for (const [chapter, indexes] of Object.entries(override.selection)) {
+      const picked = (Array.isArray(indexes) ? indexes : []).map(Number).filter(Number.isInteger);
+      if (!Number.isInteger(Number(chapter)) || picked.length === 0) {
+        return { ok: false as const, status: 400, error: `lựa chọn lỗi không hợp lệ ở chương ${chapter}` };
+      }
+      selection[chapter] = picked;
+    }
+  }
+
   const job: GenerateJob = { name, kind, status: "queued", events: [], abortRequested: false, start: async () => {} };
   job.start = async () => {
     try {
       console.log(`[${kind.toUpperCase()}] ${name} — provider=${jobConfig.provider} model=${jobConfig.editorModel || usedModel}`);
-      const run = kind === "review" ? reviewStory : fixStory;
-      await run(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true);
+      await (kind === "review"
+        ? reviewStory(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true)
+        : fixStory(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true, selection));
       job.status = "done";
       pushEvent(job, { type: "complete" });
     } catch (err: any) {

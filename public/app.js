@@ -1,4 +1,4 @@
-const state = { currentStoryName: null, settingsProvider: "", generateSource: null, ttsSource: null, jobsSource: null, activeJobsKey: "", wordsPerMinute: 150, currentBible: null, currentOutline: null };
+const state = { currentStoryName: null, settingsProvider: "", selectedIssues: new Map(), generateSource: null, ttsSource: null, jobsSource: null, activeJobsKey: "", wordsPerMinute: 150, currentBible: null, currentOutline: null };
 
 function suggestStructure(minutes, wpm) {
   const words = minutes * wpm;
@@ -225,7 +225,7 @@ async function loadHome() {
     tr.innerHTML = `
       <td></td>
       <td>${statusText}</td>
-      <td class="${scoreClass(story.reviewScore)}">${story.reviewScore ?? "—"}</td>
+      <td class="${scoreClass(story.reviewScore)}" title="${story.staleChapters ? `${story.staleChapters} chương đã viết lại sau lần chấm điểm` : ""}">${story.reviewScore ?? "—"}${story.staleChapters ? " ⚠" : ""}</td>
       <td>
         <button data-resume="${!busy && !story.hasFinalStory}">${actionLabel}</button>
         <button class="btn-secondary" data-review="1" ${story.hasReview ? "" : 'disabled title="Chưa chấm điểm truyện này"'}>Báo cáo</button>
@@ -446,6 +446,13 @@ function setReviewActions(data) {
 
   ensureSettingsProvider().then(populateTaskModels);
 
+  const stale = data.staleChapters ?? [];
+  const warn = document.getElementById("review-actions-warning");
+  warn.hidden = stale.length === 0;
+  warn.textContent = stale.length
+    ? `⚠ Chương ${stale.join(", ")} đã viết lại sau lần chấm điểm — điểm đang hiển thị là của bản cũ. Nên chấm điểm lại.`
+    : "";
+
   const parts = [];
   if (data.review?.generatedAt) {
     parts.push(`Chấm lúc ${new Date(data.review.generatedAt).toLocaleString("vi-VN")}`);
@@ -470,11 +477,11 @@ async function ensureSettingsProvider() {
   return state.settingsProvider;
 }
 
-function populateTaskModels() {
+function populateTaskModels(providerId = "field-task-provider", modelId = "field-task-model") {
   // Bỏ trống nguồn = dùng nguồn trong Cài đặt, nhưng vẫn cho đổi riêng model,
   // vì "giữ nguồn, đổi model" mới là trường hợp hay dùng nhất.
-  const provider = document.getElementById("field-task-provider").value || state.settingsProvider;
-  const el = document.getElementById("field-task-model");
+  const provider = document.getElementById(providerId).value || state.settingsProvider;
+  const el = document.getElementById(modelId);
   const previous = el.value;
   const source = provider === "claude" ? "field-claude-model"
     : provider === "deepseek" ? "field-deepseek-model"
@@ -489,11 +496,13 @@ function populateTaskModels() {
   el.value = [...el.options].some(o => o.value === previous) ? previous : "";
 }
 
-document.getElementById("field-task-provider").addEventListener("change", populateTaskModels);
+document.getElementById("field-task-provider").addEventListener("change", () => populateTaskModels());
+document.getElementById("field-sel-provider").addEventListener("change",
+  () => populateTaskModels("field-sel-provider", "field-sel-model"));
 
-async function runStoryTask(kind) {
+async function runStoryTask(kind, overrides = null) {
   const name = state.currentStoryName;
-  const body = {
+  const body = overrides ?? {
     provider: document.getElementById("field-task-provider").value || undefined,
     model: document.getElementById("field-task-model").value || undefined
   };
@@ -550,13 +559,19 @@ function scoreClass(value) {
 }
 
 async function openReview(name) {
+  state.currentStoryName = name;
   const res = await fetch(`/api/stories/${encodeURIComponent(name)}`);
   const data = await res.json();
-  renderReview(name, data.review, data.fixReport);
+  state.selectedIssues.clear();
+  updateSelectionBar();
+  await ensureSettingsProvider();
+  populateTaskModels("field-sel-provider", "field-sel-model");
+  renderReview(name, data.review, data.fixReport, data.staleChapters);
   show("view-review");
 }
 
-function renderReview(name, review, fixReport) {
+function renderReview(name, review, fixReport, staleChapters = []) {
+  const stale = new Set(staleChapters);
   document.getElementById("review-title").textContent = `Báo cáo review — ${name}`;
 
   const summary = review?.summary;
@@ -585,11 +600,25 @@ function renderReview(name, review, fixReport) {
   body.innerHTML = "";
   document.getElementById("review-chapter-detail").innerHTML = "";
 
+  const staleNote = document.getElementById("review-stale-note");
+  staleNote.hidden = stale.size === 0;
+  staleNote.textContent = stale.size
+    ? `⚠ Chương ${[...stale].join(", ")} đã viết lại sau lần chấm điểm. Điểm của những chương đó là của bản cũ, không phải bản đang nằm trên đĩa.`
+    : "";
+
   for (const chapter of review?.chapters ?? []) {
     const tr = document.createElement("tr");
     tr.className = "review-row";
     const first = document.createElement("td");
     first.textContent = chapter.chapter;
+    if (stale.has(chapter.chapter)) {
+      const badge = document.createElement("span");
+      badge.className = "badge badge-stale";
+      badge.textContent = "cũ";
+      badge.title = "Chương đã viết lại sau lần chấm điểm này";
+      first.append(" ", badge);
+      tr.classList.add("row-stale");
+    }
     tr.appendChild(first);
 
     for (const key of CHAPTER_CRITERIA) {
@@ -612,12 +641,31 @@ function renderReview(name, review, fixReport) {
 }
 
 // Model output goes in via textContent, never innerHTML - it is prose we did not write.
-function issueCard(issue, chapters) {
+function issueCard(issue, chapters, chapterNo = null, index = null) {
   const card = document.createElement("div");
   card.className = "issue-card";
 
+  // Lỗi tổng hợp ở đầu báo cáo gộp nhiều chương nên không tick được; chỉ lỗi
+  // thuộc đúng một chương mới ánh xạ được về chỉ số trong review-report.
+  let checkbox = null;
+  if (chapterNo !== null) {
+    checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(state.selectedIssues.get(chapterNo)?.has(index));
+    card.classList.toggle("picked", checkbox.checked);
+    checkbox.addEventListener("change", () => {
+      if (!state.selectedIssues.has(chapterNo)) state.selectedIssues.set(chapterNo, new Set());
+      const set = state.selectedIssues.get(chapterNo);
+      if (checkbox.checked) set.add(index); else set.delete(index);
+      if (!set.size) state.selectedIssues.delete(chapterNo);
+      card.classList.toggle("picked", checkbox.checked);
+      updateSelectionBar();
+    });
+  }
+
   const head = document.createElement("p");
   head.className = "issue-head";
+  if (checkbox) head.appendChild(checkbox);
   const badge = document.createElement("span");
   badge.className = "badge " + (issue.severity === "cao" ? "badge-high" : issue.severity === "vừa" ? "badge-mid" : "badge-low");
   badge.textContent = issue.severity ?? "?";
@@ -642,6 +690,35 @@ function issueCard(issue, chapters) {
   }
   return card;
 }
+
+function updateSelectionBar() {
+  const bar = document.getElementById("fix-selection-bar");
+  const chapters = [...state.selectedIssues.keys()].sort((a, b) => a - b);
+  const total = chapters.reduce((n, ch) => n + state.selectedIssues.get(ch).size, 0);
+  bar.hidden = total === 0;
+  document.getElementById("fix-selection-count").textContent =
+    `Đã chọn ${total} lỗi ở chương ${chapters.join(", ")}. Bấm sửa sẽ viết lại đúng những chương đó theo các lỗi đã chọn; bản gốc cất vào pre-fix/, bản sửa bị bỏ nếu chấm lại không cao hơn.`;
+}
+
+document.getElementById("btn-clear-selection").addEventListener("click", () => {
+  state.selectedIssues.clear();
+  updateSelectionBar();
+  document.querySelectorAll("#review-chapter-detail input[type=checkbox]").forEach(el => { el.checked = false; });
+  document.querySelectorAll("#review-chapter-detail .issue-card").forEach(el => el.classList.remove("picked"));
+});
+
+document.getElementById("btn-fix-selected").addEventListener("click", async () => {
+  const selection = {};
+  for (const [chapter, set] of state.selectedIssues) selection[chapter] = [...set];
+  const name = state.currentStoryName;
+  const provider = document.getElementById("field-sel-provider").value || undefined;
+  const model = document.getElementById("field-sel-model").value || undefined;
+  state.selectedIssues.clear();
+  updateSelectionBar();
+  // Nhảy về màn hình truyện trước: đó mới là chỗ có SSE, thanh tiến trình và nút Dừng.
+  await openStory(name);
+  await runStoryTask("fix", { selection, provider, model });
+});
 
 function showChapterDetail(chapter, fix) {
   const el = document.getElementById("review-chapter-detail");
@@ -668,7 +745,7 @@ function showChapterDetail(chapter, fix) {
     el.appendChild(p);
   }
 
-  for (const issue of chapter.issues ?? []) el.appendChild(issueCard(issue));
+  (chapter.issues ?? []).forEach((issue, i) => el.appendChild(issueCard(issue, null, chapter.chapter, i)));
 
   if (chapter.strengths?.length) {
     const list = document.createElement("ul");
