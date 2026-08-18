@@ -3,7 +3,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { EventEmitter } from "node:events";
 import { exists } from "./utils.js";
-import { generateStory } from "./pipeline.js";
+import { generateStory, reviewStory, fixStory, needsFix } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
 import type { ProgressEvent, TtsProgressEvent, RunUntil, JobStatus, JobSummary } from "./types.js";
@@ -21,6 +21,7 @@ function resolveUnder(root: string, name: string): string | null {
 
 interface GenerateJob {
   name: string;
+  kind: "generate" | "review" | "fix";
   status: JobStatus;
   events: ProgressEvent[];
   abortRequested: boolean;
@@ -53,6 +54,7 @@ function runningCount(): number {
 function jobSummaries(): JobSummary[] {
   return [...generateJobs.values()].map(job => ({
     name: job.name,
+    kind: job.kind,
     status: job.status,
     position: job.status === "queued" ? jobQueue.indexOf(job.name) + 1 : 0,
     error: job.error
@@ -165,6 +167,7 @@ app.get("/api/settings", async (req, res) => {
     claudeModel: overrides.claude?.model ?? config.claude.model,
     maxParallelStories: overrides.maxParallelStories ?? config.maxParallelStories,
     autoFix: overrides.autoFix ?? config.autoFix,
+    autoReview: overrides.autoReview ?? config.autoReview,
     editorModel: overrides.editorModel ?? config.editorModel
   });
 });
@@ -189,6 +192,9 @@ app.post("/api/settings", async (req, res) => {
     autoFix: typeof req.body?.autoFix === "boolean"
       ? req.body.autoFix
       : current.autoFix ?? config.autoFix,
+    autoReview: typeof req.body?.autoReview === "boolean"
+      ? req.body.autoReview
+      : current.autoReview ?? config.autoReview,
     editorModel: typeof req.body?.editorModel === "string"
       ? String(req.body.editorModel).trim()
       : current.editorModel ?? config.editorModel
@@ -258,7 +264,10 @@ app.get("/api/stories/:name", async (req, res) => {
   const review = await readJSONIfExists(path.join(dir, "review-report.json"));
   const fixReport = await readJSONIfExists(path.join(dir, "fix-report.json"));
 
-  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio, review, fixReport });
+  const needsFixChapters = ((review?.chapters ?? []) as any[]).filter(needsFix).map(r => r.chapter);
+  const completedChapters = (await fs.readdir(dir).catch(() => [])).filter(f => /^chapter-\d+\.txt$/.test(f)).length;
+
+  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio, review, fixReport, needsFixChapters, completedChapters });
 });
 
 type QueueResult =
@@ -310,7 +319,7 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
     runUntilArg = { stage: "chapters", chapterLimit: input.chapterLimit ? Number(input.chapterLimit) : undefined };
   }
 
-  const job: GenerateJob = { name, status: "queued", events: [], abortRequested: false, start: async () => {} };
+  const job: GenerateJob = { name, kind: "generate", status: "queued", events: [], abortRequested: false, start: async () => {} };
   job.start = async () => {
     try {
       await generateStory(jobConfig, ideaText, outDir, e => pushEvent(job, e), () => job.abortRequested, runUntilArg);
@@ -332,6 +341,72 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
   pushEvent(job, { type: "queued", position: jobQueue.length });
   return { ok: true, name };
 }
+
+// Chấm điểm và sửa chương chạy như job bình thường, nên dùng lại được cả hàng đợi,
+// SSE, nút Dừng và trần maxParallelStories. force=true: bấm nút là chạy lại thật,
+// cache theo file chỉ còn phục vụ đường tự động cuối generateStory.
+async function queueStoryTask(rawName: string, kind: "review" | "fix") {
+  const name = String(rawName ?? "").trim();
+  if (!name) return { ok: false as const, status: 400, error: "name is required" };
+
+  const existing = generateJobs.get(name);
+  if (existing && (existing.status === "queued" || existing.status === "running")) {
+    return { ok: false as const, status: 409, error: `"${name}" đang chạy hoặc đang chờ trong hàng đợi` };
+  }
+
+  const outDir = resolveUnder(path.resolve("output"), name);
+  if (!outDir) return { ok: false as const, status: 400, error: "invalid name" };
+  if (!(await exists(path.join(outDir, "outline.json")))) {
+    return { ok: false as const, status: 400, error: "truyện chưa có outline" };
+  }
+  if (!(await exists(path.join(outDir, "chapter-1.txt")))) {
+    return { ok: false as const, status: 400, error: "truyện chưa viết chương nào" };
+  }
+  if (kind === "fix" && !(await exists(path.join(outDir, "review-report.json")))) {
+    return { ok: false as const, status: 400, error: "chưa có báo cáo review - chấm điểm trước đã" };
+  }
+
+  const jobConfig: Config = { ...config, ...(await loadSettingsOverrides()) };
+  maxParallelStories = jobConfig.maxParallelStories;
+
+  const job: GenerateJob = { name, kind, status: "queued", events: [], abortRequested: false, start: async () => {} };
+  job.start = async () => {
+    try {
+      const run = kind === "review" ? reviewStory : fixStory;
+      await run(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true);
+      job.status = "done";
+      pushEvent(job, { type: "complete" });
+    } catch (err: any) {
+      if (err?.message === "ABORTED") {
+        job.status = "stopped";
+        pushEvent(job, { type: "stopped" });
+      } else {
+        job.status = "error";
+        job.error = String(err?.message ?? err);
+        pushEvent(job, { type: "error", message: job.error });
+      }
+    }
+  };
+
+  generateJobs.set(name, job);
+  jobQueue.push(name);
+  pushEvent(job, { type: "queued", position: jobQueue.length });
+  return { ok: true as const, name };
+}
+
+app.post("/api/review/:name", async (req, res) => {
+  const result = await queueStoryTask(req.params.name, "review");
+  if (!result.ok) return res.status(result.status).json({ error: result.error });
+  pump();
+  res.json({ queued: result.name });
+});
+
+app.post("/api/fix/:name", async (req, res) => {
+  const result = await queueStoryTask(req.params.name, "fix");
+  if (!result.ok) return res.status(result.status).json({ error: result.error });
+  pump();
+  res.json({ queued: result.name });
+});
 
 // Nhận một truyện ({name, idea|ideaFile, ...}) hoặc nhiều truyện cùng lúc
 // ({items: [...], ...cấu hình dùng chung}).

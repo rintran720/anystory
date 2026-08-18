@@ -161,6 +161,7 @@ async function openSettings() {
     : "Chưa có key";
   document.getElementById("field-claude-model").value = data.claudeModel;
   document.getElementById("field-parallel").value = data.maxParallelStories;
+  document.getElementById("field-auto-review").checked = Boolean(data.autoReview);
   document.getElementById("field-auto-fix").checked = Boolean(data.autoFix);
   toggleProviderFields();
   document.getElementById("field-editor-model").value = data.editorModel || "";
@@ -178,6 +179,7 @@ document.getElementById("settings-form").addEventListener("submit", async ev => 
     claudeModel: document.getElementById("field-claude-model").value,
     maxParallelStories: document.getElementById("field-parallel").value || undefined,
     autoFix: document.getElementById("field-auto-fix").checked,
+    autoReview: document.getElementById("field-auto-review").checked,
     editorModel: document.getElementById("field-editor-model").value
   };
   const apiKey = document.getElementById("field-deepseek-key").value.trim();
@@ -262,7 +264,8 @@ function renderJobs(payload) {
     const li = document.createElement("li");
     li.innerHTML = `<strong></strong> <span></span> <button data-open>Xem</button> <button data-stop>Dừng</button>`;
     li.querySelector("strong").textContent = job.name;
-    li.querySelector("span").textContent = job.status === "running" ? "đang chạy" : `chờ #${job.position}`;
+    const what = job.kind === "review" ? "chấm điểm" : job.kind === "fix" ? "sửa chương" : "viết truyện";
+    li.querySelector("span").textContent = job.status === "running" ? `đang ${what}` : `chờ ${what} #${job.position}`;
     li.querySelector("[data-open]").addEventListener("click", () => openStory(job.name));
     li.querySelector("[data-stop]").addEventListener("click", () => stopJob(job.name));
     list.appendChild(li);
@@ -388,13 +391,11 @@ async function openStory(name) {
   show("view-run");
 
   connectGenerateStream(name);
-  await refreshReviewPanel(name);
+  const data = await refreshReviewPanel(name);
 
   const cfg = await fetch("/api/config").then(r => r.json());
   document.getElementById("field-silence-gap").value = cfg.silenceGapMs;
 
-  const res = await fetch(`/api/stories/${encodeURIComponent(name)}`);
-  const data = await res.json();
   if (data.hasFinalStory) {
     document.getElementById("run-result").hidden = false;
     document.getElementById("btn-stop").hidden = true;
@@ -413,14 +414,66 @@ async function refreshReviewPanel(name) {
   const data = await res.json();
   state.currentBible = data.bible;
   state.currentOutline = data.outline;
-  state.currentReview = await fetch(`/output/${encodeURIComponent(name)}/review-report.json`)
-    .then(r => (r.ok ? r.json() : null))
-    .catch(() => null);
+  state.currentReview = data.review;
   document.getElementById("review-panel").hidden = !data.bible && !data.outline;
   document.getElementById("btn-view-bible").hidden = !data.bible;
   document.getElementById("btn-view-outline").hidden = !data.outline;
-  document.getElementById("btn-view-review").hidden = !state.currentReview;
+  document.getElementById("btn-view-review").hidden = !data.review;
+  setReviewActions(data);
+  return data;
 }
+
+// Nút luôn hiện; mờ thì phải nói rõ vì sao mờ, và nút Sửa phải cho biết
+// nó sắp đụng vào mấy chương trước khi bấm.
+function setReviewActions(data) {
+  const reviewBtn = document.getElementById("btn-review");
+  const fixBtn = document.getElementById("btn-fix");
+  const hint = document.getElementById("review-actions-hint");
+  const chapters = data.completedChapters ?? 0;
+  const todo = data.needsFixChapters ?? [];
+
+  reviewBtn.textContent = data.review ? "Chấm điểm lại" : "Chấm điểm truyện";
+  reviewBtn.disabled = chapters === 0;
+  reviewBtn.title = chapters === 0 ? "Truyện chưa viết chương nào" : "";
+
+  fixBtn.textContent = todo.length ? `Sửa ${todo.length} chương có lỗi` : "Sửa chương";
+  fixBtn.disabled = todo.length === 0;
+  fixBtn.title = !data.review
+    ? "Chấm điểm trước đã"
+    : todo.length === 0
+      ? "Không chương nào có lỗi nặng hoặc điểm ≤5"
+      : `Sẽ viết lại chương ${todo.join(", ")}`;
+
+  const parts = [];
+  if (data.review?.generatedAt) {
+    parts.push(`Chấm lúc ${new Date(data.review.generatedAt).toLocaleString("vi-VN")}`);
+    if (data.review.summary?.overall != null) parts.push(`điểm tổng ${data.review.summary.overall}`);
+  } else if (chapters) {
+    parts.push("Chưa chấm điểm truyện này.");
+  }
+  if (todo.length) parts.push(`bản gốc của chương được sửa giữ trong pre-fix/`);
+  hint.textContent = parts.join(" · ");
+}
+
+async function runStoryTask(kind) {
+  const name = state.currentStoryName;
+  const res = await fetch(`/api/${kind}/${encodeURIComponent(name)}`, { method: "POST" });
+  const data = await res.json();
+  if (!res.ok) {
+    setRunStatus(`Không chạy được: ${data.error}`);
+    return;
+  }
+  document.getElementById("btn-review").disabled = true;
+  document.getElementById("btn-fix").disabled = true;
+  document.getElementById("btn-stop").hidden = false;
+  setProgressFill(0);
+  setRunStatus(kind === "review" ? "Đã xếp hàng chấm điểm..." : "Đã xếp hàng sửa chương...");
+  closeStreams();
+  connectGenerateStream(name);
+}
+
+document.getElementById("btn-review").addEventListener("click", () => runStoryTask("review"));
+document.getElementById("btn-fix").addEventListener("click", () => runStoryTask("fix"));
 
 document.getElementById("btn-view-bible").addEventListener("click", () => {
   const el = document.getElementById("bible-text");
@@ -635,10 +688,14 @@ function handleGenerateEvent(event) {
   } else if (event.type === "check") {
     setRunStatus(`Rà soát continuity (${statusLabel(event.status)})`);
   } else if (event.type === "review") {
-    setRunStatus(event.chapter
-      ? `Chấm điểm chương ${event.chapter}/${event.total} (${statusLabel(event.status)})`
-      : `Chấm điểm truyện (${statusLabel(event.status)})`);
+    if (event.chapter && event.status === "done") setProgressFill((event.chapter / event.total) * 100);
+    setRunStatus(event.summary
+      ? "Tổng hợp báo cáo cả truyện (đang chạy)"
+      : event.chapter
+        ? `Chấm điểm chương ${event.chapter}/${event.total} (${statusLabel(event.status)})`
+        : `Chấm điểm truyện (${statusLabel(event.status)})`);
   } else if (event.type === "fix") {
+    if (event.chapter && event.status === "done") setProgressFill((event.chapter / event.total) * 100);
     setRunStatus(event.chapter
       ? `Sửa chương ${event.chapter}/${event.total} (${event.status === "done" ? (event.kept ? "đã sửa" : "giữ bản gốc") : statusLabel(event.status)})`
       : `Sửa chương theo báo cáo (${statusLabel(event.status)})`);

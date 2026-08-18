@@ -140,6 +140,7 @@
     <label>Model biên tập (chấm điểm + sửa chương) <select id="field-editor-model"></select></label>
     <p class="hint">Để trống là dùng luôn model viết truyện. Nên chọn model mạnh hơn model viết: model tự chấm bài của chính mình thường không thấy lỗi của mình. Chỉ đổi được model, vẫn chung nguồn LLM đã chọn ở trên (Ollama thì đặt <code>editorModel</code> trong <code>settings.json</code> hoặc biến môi trường <code>EDITOR_MODEL</code>).</p>
 
+    <label><input type="checkbox" id="field-auto-review"> Tự động chấm điểm ngay sau khi viết xong</label>
     <label><input type="checkbox" id="field-auto-fix"> Tự động sửa chương theo báo cáo review</label>
     <p class="hint">Viết xong sẽ chấm điểm từng chương, rồi sửa lại những chương có lỗi nặng hoặc điểm ≤5. Bản gốc luôn được giữ trong thư mục <code>pre-fix/</code>, và nếu chấm lại thấy điểm không tăng thì bản sửa bị bỏ. Tốn thêm 2 lượt gọi cho mỗi chương phải sửa.</p>
 
@@ -163,6 +164,11 @@
     <button id="btn-view-bible" hidden>Xem Story Bible</button>
     <button id="btn-view-outline" hidden>Xem Outline</button>
     <button id="btn-view-review" hidden>Xem báo cáo review</button>
+    <div id="review-actions">
+      <button id="btn-review">Chấm điểm truyện</button>
+      <button id="btn-fix">Sửa chương</button>
+      <p class="hint" id="review-actions-hint"></p>
+    </div>
     <pre id="bible-text" hidden></pre>
     <pre id="outline-text" hidden></pre>
   </div>

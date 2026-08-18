@@ -117,3 +117,6 @@ button[disabled]:hover { opacity: 0.4; }
 #review-chapter-detail { margin-top: 16px; }
 #review-chapter-detail h4 { margin: 0 0 10px; font-size: 15px; }
 .strengths { color: var(--text-dim); font-size: 13px; padding-left: 20px; }
+
+#review-actions { margin-top: 10px; }
+#review-actions .hint { margin-top: 8px; }
