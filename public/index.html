@@ -21,9 +21,34 @@
   </div>
 
   <table id="story-table">
-    <thead><tr><th>Tên</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
+    <thead><tr><th>Tên</th><th>Trạng thái</th><th>Điểm</th><th>Hành động</th></tr></thead>
     <tbody id="story-table-body"></tbody>
   </table>
+</section>
+
+<section id="view-review" hidden>
+  <button class="btn-back" data-target="view-home">&larr; Quay lại</button>
+  <h2 id="review-title"></h2>
+
+  <div id="review-summary">
+    <div class="score-hero">
+      <span id="review-overall" class="score-big"></span>
+      <span class="hint">điểm tổng</span>
+    </div>
+    <div id="review-summary-scores" class="score-chips"></div>
+    <p id="review-verdict"></p>
+  </div>
+
+  <h3>Lỗi cần sửa trước</h3>
+  <div id="review-top-issues"></div>
+
+  <h3>Điểm từng chương</h3>
+  <p class="hint">Bấm vào một chương để xem chi tiết lỗi. Điểm ≤5 là hỏng, 6 là nhạt, ≥7 là nghe được.</p>
+  <table id="review-chapter-table">
+    <thead><tr><th>Ch.</th><th>Hook</th><th>Nhịp</th><th>Show</th><th>Thoại</th><th>Căng</th><th>N.vật</th><th>Sửa</th></tr></thead>
+    <tbody id="review-chapter-body"></tbody>
+  </table>
+  <div id="review-chapter-detail"></div>
 </section>
 
 <section id="view-create" hidden>
@@ -112,6 +137,12 @@
     <label>Số truyện chạy song song <input type="number" id="field-parallel" min="1" max="16"></label>
     <p class="hint">Ollama local nên để 1 (model chạy tuần tự). DeepSeek/Claude có thể 3–8 tuỳ giới hạn tài khoản và RAM. Đổi số này áp dụng ngay, job đang chờ sẽ chạy tiếp.</p>
 
+    <label>Model biên tập (chấm điểm + sửa chương) <select id="field-editor-model"></select></label>
+    <p class="hint">Để trống là dùng luôn model viết truyện. Nên chọn model mạnh hơn model viết: model tự chấm bài của chính mình thường không thấy lỗi của mình. Chỉ đổi được model, vẫn chung nguồn LLM đã chọn ở trên (Ollama thì đặt <code>editorModel</code> trong <code>settings.json</code> hoặc biến môi trường <code>EDITOR_MODEL</code>).</p>
+
+    <label><input type="checkbox" id="field-auto-fix"> Tự động sửa chương theo báo cáo review</label>
+    <p class="hint">Viết xong sẽ chấm điểm từng chương, rồi sửa lại những chương có lỗi nặng hoặc điểm ≤5. Bản gốc luôn được giữ trong thư mục <code>pre-fix/</code>, và nếu chấm lại thấy điểm không tăng thì bản sửa bị bỏ. Tốn thêm 2 lượt gọi cho mỗi chương phải sửa.</p>
+
     <p id="settings-message" hidden></p>
     <button type="submit">Lưu</button>
   </form>
@@ -134,7 +165,6 @@
     <button id="btn-view-review" hidden>Xem báo cáo review</button>
     <pre id="bible-text" hidden></pre>
     <pre id="outline-text" hidden></pre>
-    <pre id="review-text" hidden></pre>
   </div>
 
   <pre id="run-log"></pre>

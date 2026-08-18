@@ -163,7 +163,9 @@ app.get("/api/settings", async (req, res) => {
     deepseekModel: overrides.deepseek?.model ?? config.deepseek.model,
     deepseekApiKeySet: Boolean((overrides.deepseek?.apiKey ?? config.deepseek.apiKey).trim()),
     claudeModel: overrides.claude?.model ?? config.claude.model,
-    maxParallelStories: overrides.maxParallelStories ?? config.maxParallelStories
+    maxParallelStories: overrides.maxParallelStories ?? config.maxParallelStories,
+    autoFix: overrides.autoFix ?? config.autoFix,
+    editorModel: overrides.editorModel ?? config.editorModel
   });
 });
 
@@ -183,7 +185,13 @@ app.post("/api/settings", async (req, res) => {
     claudeModel: (claudeModel && String(claudeModel).trim()) || current.claude?.model || config.claude.model,
     maxParallelStories: Number.isFinite(parallel) && parallel >= 1
       ? Math.min(16, Math.floor(parallel))
-      : current.maxParallelStories ?? config.maxParallelStories
+      : current.maxParallelStories ?? config.maxParallelStories,
+    autoFix: typeof req.body?.autoFix === "boolean"
+      ? req.body.autoFix
+      : current.autoFix ?? config.autoFix,
+    editorModel: typeof req.body?.editorModel === "string"
+      ? String(req.body.editorModel).trim()
+      : current.editorModel ?? config.editorModel
   };
 
   await fs.writeFile("settings.json.tmp", JSON.stringify(settings, null, 2), "utf8");
@@ -212,6 +220,8 @@ app.get("/api/stories", async (req, res) => {
       const hasAudio = (await exists(audioDir)) &&
         (await fs.readdir(audioDir)).some(f => f.endsWith(".wav"));
 
+      const review = await readJSONIfExists(path.join(dir, "review-report.json"));
+
       const jobStatus = generateJobs.get(e.name)?.status ?? null;
       return {
         name: e.name,
@@ -219,6 +229,8 @@ app.get("/api/stories", async (req, res) => {
         completedChapters,
         hasFinalStory,
         hasAudio,
+        hasReview: Boolean(review),
+        reviewScore: review?.summary?.overall ?? null,
         isRunning: jobStatus === "running",
         isQueued: jobStatus === "queued"
       };
@@ -243,7 +255,10 @@ app.get("/api/stories/:name", async (req, res) => {
   const finalAudioPath = path.join(dir, "tts", "final_audio.wav");
   const finalAudio = (await exists(finalAudioPath)) ? "tts/final_audio.wav" : null;
 
-  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio });
+  const review = await readJSONIfExists(path.join(dir, "review-report.json"));
+  const fixReport = await readJSONIfExists(path.join(dir, "fix-report.json"));
+
+  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio, review, fixReport });
 });
 
 type QueueResult =

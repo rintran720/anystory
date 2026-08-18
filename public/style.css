@@ -86,3 +86,34 @@ pre {
 
 #btn-settings { margin-left: 8px; }
 .success { color: #4caf82; font-size: 14px; }
+
+.btn-secondary { background: var(--panel); color: var(--text-dim); border: 1px solid var(--border); margin-left: 6px; }
+button[disabled] { opacity: 0.4; cursor: default; }
+button[disabled]:hover { opacity: 0.4; }
+
+.score-good { color: #4caf82; }
+.score-mid { color: #d9a441; }
+.score-bad { color: var(--error); }
+
+.score-hero { display: flex; align-items: baseline; gap: 8px; }
+.score-big { font-size: 40px; font-weight: 600; }
+.score-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.score-chip { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 10px; font-size: 13px; }
+#review-verdict { font-size: 14px; line-height: 1.6; }
+
+.issue-card { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 10px; font-size: 14px; line-height: 1.55; }
+.issue-card p { margin: 0 0 6px; }
+.issue-card p:last-child { margin-bottom: 0; }
+.issue-head { display: flex; align-items: center; gap: 8px; }
+.issue-fix { color: var(--text-dim); }
+.badge { border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+.badge-high { background: #4a1f24; color: #ff9b9b; }
+.badge-mid { background: #46381d; color: #e8c07a; }
+.badge-low { background: var(--accent-dim); color: #b9caf5; }
+.chapter-chip { color: var(--text-dim); font-size: 12px; }
+
+.review-row { cursor: pointer; }
+.review-row:hover td { background: var(--accent-dim); }
+#review-chapter-detail { margin-top: 16px; }
+#review-chapter-detail h4 { margin: 0 0 10px; font-size: 15px; }
+.strengths { color: var(--text-dim); font-size: 13px; padding-left: 20px; }

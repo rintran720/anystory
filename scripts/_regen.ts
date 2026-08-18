@@ -1,0 +1,10 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import {config, loadSettingsOverrides} from "../src/config.js";
+import {generateStory} from "../src/pipeline.js";
+const out = path.resolve("output", "Chiếc Nhẫn Của Mẹ");
+const idea = await fs.readFile("stories/test-batch/chiec-nhan-cua-me.txt", "utf8");
+const outline = JSON.parse(await fs.readFile(path.join(out, "outline.json"), "utf8"));
+const c = {...config, ...(await loadSettingsOverrides()), chapters: outline.chapters.length};
+console.log("provider=%s model=%s chapters=%d", c.provider, c.claude.model, c.chapters);
+await generateStory(c, idea.trim(), out, e => console.log("EVENT " + JSON.stringify(e)));

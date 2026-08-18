@@ -126,6 +126,25 @@ function toggleProviderFields() {
   document.getElementById("settings-ollama").hidden = provider !== "ollama";
   document.getElementById("settings-deepseek").hidden = provider !== "deepseek";
   document.getElementById("settings-claude").hidden = provider !== "claude";
+  populateEditorModels(provider);
+}
+
+// Editor-model options mirror the active provider's own model list, so there is
+// no second list to keep in sync and no free-text field to mistype a name into.
+function populateEditorModels(provider) {
+  const el = document.getElementById("field-editor-model");
+  const previous = el.value;
+  const source = provider === "claude" ? "field-claude-model"
+    : provider === "deepseek" ? "field-deepseek-model"
+    : null;
+  el.innerHTML = "";
+  el.appendChild(new Option("(dùng model viết truyện)", ""));
+  if (source) {
+    for (const opt of document.getElementById(source).options) {
+      el.appendChild(new Option(opt.textContent, opt.value));
+    }
+  }
+  el.value = [...el.options].some(o => o.value === previous) ? previous : "";
 }
 
 async function openSettings() {
@@ -142,7 +161,9 @@ async function openSettings() {
     : "Chưa có key";
   document.getElementById("field-claude-model").value = data.claudeModel;
   document.getElementById("field-parallel").value = data.maxParallelStories;
+  document.getElementById("field-auto-fix").checked = Boolean(data.autoFix);
   toggleProviderFields();
+  document.getElementById("field-editor-model").value = data.editorModel || "";
 }
 
 document.getElementById("settings-form").addEventListener("submit", async ev => {
@@ -155,7 +176,9 @@ document.getElementById("settings-form").addEventListener("submit", async ev => 
     ollamaModel: document.getElementById("field-ollama-model").value.trim(),
     deepseekModel: document.getElementById("field-deepseek-model").value,
     claudeModel: document.getElementById("field-claude-model").value,
-    maxParallelStories: document.getElementById("field-parallel").value || undefined
+    maxParallelStories: document.getElementById("field-parallel").value || undefined,
+    autoFix: document.getElementById("field-auto-fix").checked,
+    editorModel: document.getElementById("field-editor-model").value
   };
   const apiKey = document.getElementById("field-deepseek-key").value.trim();
   if (apiKey) body.deepseekApiKey = apiKey;
@@ -200,16 +223,22 @@ async function loadHome() {
     tr.innerHTML = `
       <td></td>
       <td>${statusText}</td>
-      <td><button data-resume="${!busy && !story.hasFinalStory}">${actionLabel}</button></td>
+      <td class="${scoreClass(story.reviewScore)}">${story.reviewScore ?? "—"}</td>
+      <td>
+        <button data-resume="${!busy && !story.hasFinalStory}">${actionLabel}</button>
+        <button class="btn-secondary" data-review="1" ${story.hasReview ? "" : 'disabled title="Chưa chấm điểm truyện này"'}>Báo cáo</button>
+      </td>
     `;
     tr.querySelector("td").textContent = story.name;
-    tr.querySelector("button").dataset.name = story.name;
+    tr.querySelectorAll("button").forEach(b => (b.dataset.name = story.name));
     body.appendChild(tr);
   }
 
   body.querySelectorAll("button[data-name]").forEach(btn => {
     btn.addEventListener("click", async () => {
-      if (btn.dataset.resume === "true") {
+      if (btn.dataset.review === "1") {
+        openReview(btn.dataset.name);
+      } else if (btn.dataset.resume === "true") {
         await loadIdeaFiles();
         openCreateForm(btn.dataset.name);
       } else {
@@ -406,10 +435,155 @@ document.getElementById("btn-view-outline").addEventListener("click", () => {
 });
 
 document.getElementById("btn-view-review").addEventListener("click", () => {
-  const el = document.getElementById("review-text");
-  el.textContent = JSON.stringify(state.currentReview, null, 2);
-  el.hidden = false;
+  openReview(state.currentStoryName);
 });
+
+const CHAPTER_CRITERIA = ["hook", "nhipDo", "showKhongTell", "hoiThoai", "cangThang", "nhanVat"];
+const SUMMARY_CRITERIA = [
+  ["cauTruc", "Cấu trúc"], ["vongCungNhanVat", "Vòng cung nhân vật"], ["caoTrao", "Cao trào"],
+  ["ketThuc", "Kết thúc"], ["doMoiLa", "Độ mới lạ"], ["bamMoralMotif", "Bám moral/motif"]
+];
+
+function scoreClass(value) {
+  // Number(null) is 0, not NaN - without this guard a missing score reads as "hỏng".
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  return n <= 5 ? "score-bad" : n === 6 ? "score-mid" : "score-good";
+}
+
+async function openReview(name) {
+  const res = await fetch(`/api/stories/${encodeURIComponent(name)}`);
+  const data = await res.json();
+  renderReview(name, data.review, data.fixReport);
+  show("view-review");
+}
+
+function renderReview(name, review, fixReport) {
+  document.getElementById("review-title").textContent = `Báo cáo review — ${name}`;
+
+  const summary = review?.summary;
+  const overallEl = document.getElementById("review-overall");
+  overallEl.textContent = summary?.overall ?? "—";
+  overallEl.className = "score-big " + scoreClass(summary?.overall);
+  document.getElementById("review-verdict").textContent = summary?.verdict ?? "";
+
+  const chips = document.getElementById("review-summary-scores");
+  chips.innerHTML = "";
+  for (const [key, label] of SUMMARY_CRITERIA) {
+    const value = summary?.scores?.[key];
+    const chip = document.createElement("span");
+    chip.className = "score-chip " + scoreClass(value);
+    chip.textContent = `${label} ${value ?? "—"}`;
+    chips.appendChild(chip);
+  }
+
+  const issuesEl = document.getElementById("review-top-issues");
+  issuesEl.innerHTML = "";
+  for (const issue of summary?.topIssues ?? []) issuesEl.appendChild(issueCard(issue, issue.chapters));
+  if (!issuesEl.children.length) issuesEl.innerHTML = '<p class="hint">Không có lỗi nào được nêu.</p>';
+
+  const fixByChapter = new Map((fixReport?.fixes ?? []).map(f => [f.chapter, f]));
+  const body = document.getElementById("review-chapter-body");
+  body.innerHTML = "";
+  document.getElementById("review-chapter-detail").innerHTML = "";
+
+  for (const chapter of review?.chapters ?? []) {
+    const tr = document.createElement("tr");
+    tr.className = "review-row";
+    const first = document.createElement("td");
+    first.textContent = chapter.chapter;
+    tr.appendChild(first);
+
+    for (const key of CHAPTER_CRITERIA) {
+      const td = document.createElement("td");
+      const value = chapter.scores?.[key];
+      td.textContent = chapter.error ? "lỗi" : (value ?? "—");
+      td.className = scoreClass(value);
+      tr.appendChild(td);
+    }
+
+    const fix = fixByChapter.get(chapter.chapter);
+    const fixCell = document.createElement("td");
+    fixCell.textContent = fix ? (fix.kept ? "đã sửa" : "giữ gốc") : "—";
+    if (fix?.note) fixCell.title = fix.note;
+    tr.appendChild(fixCell);
+
+    tr.addEventListener("click", () => showChapterDetail(chapter, fix));
+    body.appendChild(tr);
+  }
+}
+
+// Model output goes in via textContent, never innerHTML - it is prose we did not write.
+function issueCard(issue, chapters) {
+  const card = document.createElement("div");
+  card.className = "issue-card";
+
+  const head = document.createElement("p");
+  head.className = "issue-head";
+  const badge = document.createElement("span");
+  badge.className = "badge " + (issue.severity === "cao" ? "badge-high" : issue.severity === "vừa" ? "badge-mid" : "badge-low");
+  badge.textContent = issue.severity ?? "?";
+  head.appendChild(badge);
+  if (chapters?.length) {
+    const chip = document.createElement("span");
+    chip.className = "chapter-chip";
+    chip.textContent = "chương " + chapters.join(", ");
+    head.appendChild(chip);
+  }
+  card.appendChild(head);
+
+  const detail = document.createElement("p");
+  detail.textContent = issue.detail ?? "";
+  card.appendChild(detail);
+
+  if (issue.suggestion) {
+    const suggestion = document.createElement("p");
+    suggestion.className = "issue-fix";
+    suggestion.textContent = "→ " + issue.suggestion;
+    card.appendChild(suggestion);
+  }
+  return card;
+}
+
+function showChapterDetail(chapter, fix) {
+  const el = document.getElementById("review-chapter-detail");
+  el.innerHTML = "";
+
+  const heading = document.createElement("h4");
+  heading.textContent = `Chương ${chapter.chapter}`;
+  el.appendChild(heading);
+
+  if (chapter.error) {
+    const p = document.createElement("p");
+    p.className = "error";
+    p.textContent = "Chấm điểm thất bại: " + chapter.error;
+    el.appendChild(p);
+    return;
+  }
+
+  if (fix) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = fix.kept
+      ? `Đã sửa, giữ bản mới (${fix.note || "điểm tăng"}).`
+      : `Giữ bản gốc — ${fix.note || "không rõ lý do"}.`;
+    el.appendChild(p);
+  }
+
+  for (const issue of chapter.issues ?? []) el.appendChild(issueCard(issue));
+
+  if (chapter.strengths?.length) {
+    const list = document.createElement("ul");
+    list.className = "strengths";
+    for (const item of chapter.strengths) {
+      const li = document.createElement("li");
+      li.textContent = item;
+      list.appendChild(li);
+    }
+    el.appendChild(list);
+  }
+}
 
 function setProgressFill(percent) {
   document.getElementById("run-progress-fill").style.width = `${Math.max(0, Math.min(100, percent))}%`;
@@ -464,6 +638,10 @@ function handleGenerateEvent(event) {
     setRunStatus(event.chapter
       ? `Chấm điểm chương ${event.chapter}/${event.total} (${statusLabel(event.status)})`
       : `Chấm điểm truyện (${statusLabel(event.status)})`);
+  } else if (event.type === "fix") {
+    setRunStatus(event.chapter
+      ? `Sửa chương ${event.chapter}/${event.total} (${event.status === "done" ? (event.kept ? "đã sửa" : "giữ bản gốc") : statusLabel(event.status)})`
+      : `Sửa chương theo báo cáo (${statusLabel(event.status)})`);
   } else if (event.type === "chapter") {
     const doneOffset = event.status === "done" || event.status === "cache" ? 0 : 1;
     setProgressFill(((event.chapter - doneOffset) / event.total) * 100);
