@@ -165,6 +165,17 @@
     <button id="btn-view-outline" hidden>Xem Outline</button>
     <button id="btn-view-review" hidden>Xem báo cáo review</button>
     <div id="review-actions">
+      <div id="task-model-row">
+        <label>Chạy lượt này bằng
+          <select id="field-task-provider">
+            <option value="">(theo cài đặt)</option>
+            <option value="ollama">Ollama (local)</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="claude">Claude</option>
+          </select>
+        </label>
+        <label>Model <select id="field-task-model"></select></label>
+      </div>
       <button id="btn-review">Chấm điểm truyện</button>
       <button id="btn-fix">Sửa chương</button>
       <p class="hint" id="review-actions-hint"></p>

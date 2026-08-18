@@ -1,4 +1,4 @@
-const state = { currentStoryName: null, generateSource: null, ttsSource: null, jobsSource: null, activeJobsKey: "", wordsPerMinute: 150, currentBible: null, currentOutline: null };
+const state = { currentStoryName: null, settingsProvider: "", generateSource: null, ttsSource: null, jobsSource: null, activeJobsKey: "", wordsPerMinute: 150, currentBible: null, currentOutline: null };
 
 function suggestStructure(minutes, wpm) {
   const words = minutes * wpm;
@@ -444,9 +444,12 @@ function setReviewActions(data) {
       ? "Không chương nào có lỗi nặng hoặc điểm ≤5"
       : `Sẽ viết lại chương ${todo.join(", ")}`;
 
+  ensureSettingsProvider().then(populateTaskModels);
+
   const parts = [];
   if (data.review?.generatedAt) {
     parts.push(`Chấm lúc ${new Date(data.review.generatedAt).toLocaleString("vi-VN")}`);
+    if (data.review.model) parts.push(`bằng ${data.review.provider}/${data.review.model}`);
     if (data.review.summary?.overall != null) parts.push(`điểm tổng ${data.review.summary.overall}`);
   } else if (chapters) {
     parts.push("Chưa chấm điểm truyện này.");
@@ -455,9 +458,50 @@ function setReviewActions(data) {
   hint.textContent = parts.join(" · ");
 }
 
+// Danh sách model cho lượt chạy nhân bản từ dropdown của màn hình Cài đặt: một nguồn
+// sự thật duy nhất, và không gõ tay được sai tên model.
+async function ensureSettingsProvider() {
+  if (!state.settingsProvider) {
+    const data = await fetch("/api/settings").then(r => r.json()).catch(() => null);
+    state.settingsProvider = data?.provider || "";
+    const opt = document.getElementById("field-task-provider").options[0];
+    if (state.settingsProvider) opt.textContent = `(theo cài đặt: ${state.settingsProvider})`;
+  }
+  return state.settingsProvider;
+}
+
+function populateTaskModels() {
+  // Bỏ trống nguồn = dùng nguồn trong Cài đặt, nhưng vẫn cho đổi riêng model,
+  // vì "giữ nguồn, đổi model" mới là trường hợp hay dùng nhất.
+  const provider = document.getElementById("field-task-provider").value || state.settingsProvider;
+  const el = document.getElementById("field-task-model");
+  const previous = el.value;
+  const source = provider === "claude" ? "field-claude-model"
+    : provider === "deepseek" ? "field-deepseek-model"
+    : null;
+  el.innerHTML = "";
+  el.appendChild(new Option("(theo cài đặt)", ""));
+  if (source) {
+    for (const opt of document.getElementById(source).options) el.appendChild(new Option(opt.textContent, opt.value));
+  }
+  el.disabled = !source;
+  el.title = source ? "" : "Model Ollama đặt trong Cài đặt";
+  el.value = [...el.options].some(o => o.value === previous) ? previous : "";
+}
+
+document.getElementById("field-task-provider").addEventListener("change", populateTaskModels);
+
 async function runStoryTask(kind) {
   const name = state.currentStoryName;
-  const res = await fetch(`/api/${kind}/${encodeURIComponent(name)}`, { method: "POST" });
+  const body = {
+    provider: document.getElementById("field-task-provider").value || undefined,
+    model: document.getElementById("field-task-model").value || undefined
+  };
+  const res = await fetch(`/api/${kind}/${encodeURIComponent(name)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
   const data = await res.json();
   if (!res.ok) {
     setRunStatus(`Không chạy được: ${data.error}`);

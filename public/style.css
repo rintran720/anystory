@@ -120,3 +120,5 @@ button[disabled]:hover { opacity: 0.4; }
 
 #review-actions { margin-top: 10px; }
 #review-actions .hint { margin-top: 8px; }
+#task-model-row { display: flex; gap: 12px; margin-bottom: 10px; }
+#task-model-row label { flex: 1; margin-bottom: 0; }

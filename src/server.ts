@@ -345,7 +345,7 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
 // Chấm điểm và sửa chương chạy như job bình thường, nên dùng lại được cả hàng đợi,
 // SSE, nút Dừng và trần maxParallelStories. force=true: bấm nút là chạy lại thật,
 // cache theo file chỉ còn phục vụ đường tự động cuối generateStory.
-async function queueStoryTask(rawName: string, kind: "review" | "fix") {
+async function queueStoryTask(rawName: string, kind: "review" | "fix", override: { provider?: string; model?: string } = {}) {
   const name = String(rawName ?? "").trim();
   if (!name) return { ok: false as const, status: 400, error: "name is required" };
 
@@ -369,9 +369,34 @@ async function queueStoryTask(rawName: string, kind: "review" | "fix") {
   const jobConfig: Config = { ...config, ...(await loadSettingsOverrides()) };
   maxParallelStories = jobConfig.maxParallelStories;
 
+  // Chọn nguồn/model ngay tại nút: chỉ áp cho lượt chạy này, không ghi vào settings.json.
+  // Lựa chọn tại chỗ thắng editorModel, vì editorModel gắn với provider đang cài đặt và
+  // sẽ là tên model vô nghĩa nếu lượt này chạy sang provider khác.
+  const provider = override.provider;
+  if (provider) {
+    if (provider !== "ollama" && provider !== "deepseek" && provider !== "claude") {
+      return { ok: false as const, status: 400, error: `provider không hợp lệ: ${provider}` };
+    }
+    jobConfig.provider = provider;
+  }
+  if (override.provider || override.model) jobConfig.editorModel = "";
+  if (override.model) {
+    const model = String(override.model).trim();
+    if (jobConfig.provider === "deepseek") jobConfig.deepseek = { ...jobConfig.deepseek, model };
+    else if (jobConfig.provider === "claude") jobConfig.claude = { model };
+    else jobConfig.model = model;
+  }
+  if (jobConfig.provider === "deepseek" && !jobConfig.deepseek.apiKey.trim()) {
+    return { ok: false as const, status: 400, error: "chưa có DeepSeek API key trong Cài đặt" };
+  }
+  const usedModel = jobConfig.provider === "deepseek" ? jobConfig.deepseek.model
+    : jobConfig.provider === "claude" ? jobConfig.claude.model
+    : jobConfig.model;
+
   const job: GenerateJob = { name, kind, status: "queued", events: [], abortRequested: false, start: async () => {} };
   job.start = async () => {
     try {
+      console.log(`[${kind.toUpperCase()}] ${name} — provider=${jobConfig.provider} model=${jobConfig.editorModel || usedModel}`);
       const run = kind === "review" ? reviewStory : fixStory;
       await run(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true);
       job.status = "done";
@@ -395,14 +420,14 @@ async function queueStoryTask(rawName: string, kind: "review" | "fix") {
 }
 
 app.post("/api/review/:name", async (req, res) => {
-  const result = await queueStoryTask(req.params.name, "review");
+  const result = await queueStoryTask(req.params.name, "review", req.body ?? {});
   if (!result.ok) return res.status(result.status).json({ error: result.error });
   pump();
   res.json({ queued: result.name });
 });
 
 app.post("/api/fix/:name", async (req, res) => {
-  const result = await queueStoryTask(req.params.name, "fix");
+  const result = await queueStoryTask(req.params.name, "fix", req.body ?? {});
   if (!result.ok) return res.status(result.status).json({ error: result.error });
   pump();
   res.json({ queued: result.name });
