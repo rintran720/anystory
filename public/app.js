@@ -697,7 +697,7 @@ function updateSelectionBar() {
   const total = chapters.reduce((n, ch) => n + state.selectedIssues.get(ch).size, 0);
   bar.hidden = total === 0;
   document.getElementById("fix-selection-count").textContent =
-    `Đã chọn ${total} lỗi ở chương ${chapters.join(", ")}. Bấm sửa sẽ viết lại đúng những chương đó theo các lỗi đã chọn; bản gốc cất vào pre-fix/, bản sửa bị bỏ nếu chấm lại không cao hơn.`;
+    `Đã chọn ${total} lỗi ở chương ${chapters.join(", ")}. Bấm sửa sẽ viết lại đúng những chương đó theo các lỗi đã chọn, rồi kiểm lại từng lỗi xem đã hết chưa. Bản gốc luôn cất vào pre-fix/.`;
 }
 
 document.getElementById("btn-clear-selection").addEventListener("click", () => {
@@ -740,9 +740,15 @@ function showChapterDetail(chapter, fix) {
     const p = document.createElement("p");
     p.className = "hint";
     p.textContent = fix.kept
-      ? `Đã sửa, giữ bản mới (${fix.note || "điểm tăng"}).`
+      ? `Đã sửa, giữ bản mới — ${fix.note || "không rõ"}.`
       : `Giữ bản gốc — ${fix.note || "không rõ lý do"}.`;
     el.appendChild(p);
+    if (fix.newProblems?.length) {
+      const warn = document.createElement("p");
+      warn.className = "warn";
+      warn.textContent = `⚠ Lần sửa này có thể đã làm sinh lỗi mới: ${fix.newProblems.join(" · ")}. Bản trước khi sửa nằm ở pre-fix/chapter-${fix.chapter}.txt.`;
+      el.appendChild(warn);
+    }
   }
 
   (chapter.issues ?? []).forEach((issue, i) => el.appendChild(issueCard(issue, null, chapter.chapter, i)));

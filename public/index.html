@@ -161,7 +161,7 @@
 
     <label><input type="checkbox" id="field-auto-review"> Tự động chấm điểm ngay sau khi viết xong</label>
     <label><input type="checkbox" id="field-auto-fix"> Tự động sửa chương theo báo cáo review</label>
-    <p class="hint">Viết xong sẽ chấm điểm từng chương, rồi sửa lại những chương có lỗi nặng hoặc điểm ≤5. Bản gốc luôn được giữ trong thư mục <code>pre-fix/</code>, và nếu chấm lại thấy điểm không tăng thì bản sửa bị bỏ. Tốn thêm 2 lượt gọi cho mỗi chương phải sửa.</p>
+    <p class="hint">Viết xong sẽ chấm điểm từng chương, rồi sửa lại những chương có lỗi nặng hoặc điểm ≤5. Sửa xong sẽ kiểm lại từng lỗi xem đã hết chưa: hết được ít nhất một lỗi thì giữ bản mới, kể cả khi điểm không tăng. Bản gốc luôn nằm trong <code>pre-fix/</code>. Tốn thêm 3 lượt gọi cho mỗi chương phải sửa.</p>
 
     <p id="settings-message" hidden></p>
     <button type="submit">Lưu</button>
