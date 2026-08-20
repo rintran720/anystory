@@ -121,6 +121,7 @@ button[disabled]:hover { opacity: 0.4; }
 #review-actions { margin-top: 10px; }
 #review-actions .hint { margin-top: 8px; }
 #task-model-row { display: flex; gap: 12px; margin-bottom: 10px; }
+#fix-rounds-wrap { display: block; max-width: 220px; margin-bottom: 10px; font-size: 13px; color: var(--text-dim); }
 #task-model-row label { flex: 1; margin-bottom: 0; }
 .warn { color: #e8c07a; font-size: 13px; margin: 8px 0; line-height: 1.5; }
 .badge-stale { background: #46381d; color: #e8c07a; }

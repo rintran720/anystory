@@ -504,7 +504,8 @@ async function runStoryTask(kind, overrides = null) {
   const name = state.currentStoryName;
   const body = overrides ?? {
     provider: document.getElementById("field-task-provider").value || undefined,
-    model: document.getElementById("field-task-model").value || undefined
+    model: document.getElementById("field-task-model").value || undefined,
+    maxRounds: Number(document.getElementById("field-fix-rounds").value) || 1
   };
   const res = await fetch(`/api/${kind}/${encodeURIComponent(name)}`, {
     method: "POST",
@@ -823,8 +824,9 @@ function handleGenerateEvent(event) {
         : `Chấm điểm truyện (${statusLabel(event.status)})`);
   } else if (event.type === "fix") {
     if (event.chapter && event.status === "done") setProgressFill((event.chapter / event.total) * 100);
+    const round = event.round > 1 ? `vòng ${event.round} — ` : "";
     setRunStatus(event.chapter
-      ? `Sửa chương ${event.chapter}/${event.total} (${event.status === "done" ? (event.kept ? "đã sửa" : "giữ bản gốc") : statusLabel(event.status)})`
+      ? `${round}Sửa chương ${event.chapter}/${event.total} (${event.status === "done" ? (event.kept ? "đã sửa" : "giữ bản gốc") : statusLabel(event.status)})`
       : `Sửa chương theo báo cáo (${statusLabel(event.status)})`);
   } else if (event.type === "chapter") {
     const doneOffset = event.status === "done" || event.status === "cache" ? 0 : 1;

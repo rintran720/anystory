@@ -374,7 +374,7 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
 // Chấm điểm và sửa chương chạy như job bình thường, nên dùng lại được cả hàng đợi,
 // SSE, nút Dừng và trần maxParallelStories. force=true: bấm nút là chạy lại thật,
 // cache theo file chỉ còn phục vụ đường tự động cuối generateStory.
-async function queueStoryTask(rawName: string, kind: "review" | "fix", override: { provider?: string; model?: string; selection?: Record<string, number[]> } = {}) {
+async function queueStoryTask(rawName: string, kind: "review" | "fix", override: { provider?: string; model?: string; selection?: Record<string, number[]>; maxRounds?: number } = {}) {
   const name = String(rawName ?? "").trim();
   if (!name) return { ok: false as const, status: 400, error: "name is required" };
 
@@ -435,13 +435,20 @@ async function queueStoryTask(rawName: string, kind: "review" | "fix", override:
     }
   }
 
+  // Sửa lặp: mỗi vòng chấm lại chương vừa sửa rồi lấy chính kết quả đó chọn chương cho
+  // vòng sau. Chặn trên vì một vòng có thể tốn 3 lượt gọi cho mỗi chương còn lỗi.
+  const rounds = Number(override.maxRounds ?? 1);
+  if (!Number.isInteger(rounds) || rounds < 1 || rounds > 10) {
+    return { ok: false as const, status: 400, error: "số vòng sửa phải là số nguyên 1-10" };
+  }
+
   const job: GenerateJob = { name, kind, status: "queued", events: [], abortRequested: false, start: async () => {} };
   job.start = async () => {
     try {
       console.log(`[${kind.toUpperCase()}] ${name} — provider=${jobConfig.provider} model=${jobConfig.editorModel || usedModel}`);
       await (kind === "review"
         ? reviewStory(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true)
-        : fixStory(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true, selection));
+        : fixStory(jobConfig, outDir, e => pushEvent(job, e), () => job.abortRequested, true, selection, rounds));
       job.status = "done";
       pushEvent(job, { type: "complete" });
     } catch (err: any) {

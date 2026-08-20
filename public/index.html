@@ -195,7 +195,9 @@
         </label>
         <label>Model <select id="field-task-model"></select></label>
       </div>
+      <p class="hint">Để 1 vòng là sửa một lượt rồi dừng. Nhiều hơn 1 thì sau mỗi vòng sẽ chấm lại chương vừa sửa và sửa tiếp những chương còn lỗi cao/vừa, dừng sớm khi chỉ còn lỗi thấp hoặc khi một vòng không giữ được bản sửa nào. Mỗi vòng tốn 3 lượt gọi cho mỗi chương còn lỗi.</p>
       <p class="warn" id="review-actions-warning" hidden></p>
+      <label id="fix-rounds-wrap">Số vòng sửa tối đa <input type="number" id="field-fix-rounds" min="1" max="10" value="1"></label>
       <button id="btn-review">Chấm điểm truyện</button>
       <button id="btn-fix">Sửa chương</button>
       <p class="hint" id="review-actions-hint"></p>
