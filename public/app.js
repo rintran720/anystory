@@ -438,10 +438,11 @@ function setReviewActions(data) {
 
   fixBtn.textContent = todo.length ? `Sửa ${todo.length} chương có lỗi` : "Sửa chương";
   fixBtn.disabled = todo.length === 0;
+  const rounds = Math.max(1, Number(document.getElementById("field-fix-rounds").value) || 1);
   fixBtn.title = !data.review
     ? "Chấm điểm trước đã"
     : todo.length === 0
-      ? "Không chương nào có lỗi nặng hoặc điểm ≤5"
+      ? "Không chương nào còn lỗi cao/vừa hay tiêu chí ≤5"
       : `Sẽ viết lại chương ${todo.join(", ")}`;
 
   ensureSettingsProvider().then(populateTaskModels);
@@ -461,7 +462,8 @@ function setReviewActions(data) {
   } else if (chapters) {
     parts.push("Chưa chấm điểm truyện này.");
   }
-  if (todo.length) parts.push(`bản gốc của chương được sửa giữ trong pre-fix/`);
+  if (todo.length) parts.push(`sửa ${todo.length} chương tốn khoảng ${todo.length * 3} lượt gọi mỗi vòng${rounds > 1 ? `, tối đa ${rounds} vòng` : ""}`);
+  if (todo.length) parts.push("bản gốc luôn cất trong pre-fix/");
   hint.textContent = parts.join(" · ");
 }
 
@@ -525,6 +527,11 @@ async function runStoryTask(kind, overrides = null) {
   closeStreams();
   connectGenerateStream(name);
 }
+
+// Đổi số vòng thì dòng ước tính chi phí phải đổi theo ngay, không đợi mở lại truyện.
+document.getElementById("field-fix-rounds").addEventListener("input", () => {
+  if (state.currentStoryName) refreshReviewPanel(state.currentStoryName);
+});
 
 document.getElementById("btn-review").addEventListener("click", () => runStoryTask("review"));
 document.getElementById("btn-fix").addEventListener("click", () => runStoryTask("fix"));
