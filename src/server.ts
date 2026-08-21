@@ -457,7 +457,8 @@ async function queueStoryTask(rawName: string, kind: "review" | "fix", override:
         pushEvent(job, { type: "stopped" });
       } else {
         job.status = "error";
-        job.error = String(err?.message ?? err);
+        // Bỏ tiền tố nội bộ: người dùng cần đọc được lý do, không cần mã lỗi của mình.
+        job.error = String(err?.message ?? err).replace(/^HET_KHA_NANG: /, "");
         pushEvent(job, { type: "error", message: job.error });
       }
     }
