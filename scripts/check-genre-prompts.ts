@@ -161,6 +161,10 @@ for (const g of [d, n]) {
   for (const m of g.HOOKFIX.matchAll(/\{\{[A-Z_]+\}\}/g))
     must(HOOKFIX_VARS.has(m[0]), `${g.id} HOOKFIX uses ${m[0]}, which rewriteHook never fills — it ships to the model literally`);
   must(g.HOOKFIX.includes("NÓI CHO DỄ HIỂU"), `${g.id} HOOKFIX lost the plain-language block, which is the entire point of the button`);
+  // "Dễ hiểu" một mình đẻ ra văn cụt: bản đầu bảo model "câu nào dài hơn thì cắt đôi" và
+  // nó trả về ba mảnh không chủ ngữ liên tiếp - dễ nghe từng chữ, nhưng nghe như đọc gạch
+  // đầu dòng. Luật chống chặt câu là thứ giữ cho dễ hiểu không nuốt mất mượt mà.
+  must(g.HOOKFIX.includes("KHÔNG chặt làm đôi"), `${g.id} HOOKFIX no longer stops the model chopping long sentences into fragments`);
   must(g.HOOKFIX.includes("GIỮ NGUYÊN tên riêng"), `${g.id} HOOKFIX no longer protects the cast's proper names`);
   must(g.HOOKFIX.includes("không nói cái kết"), `${g.id} HOOKFIX no longer forbids spoiling the ending`);
 }

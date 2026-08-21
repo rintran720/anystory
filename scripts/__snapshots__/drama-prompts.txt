@@ -86,12 +86,14 @@ OUTLINE:
 ########## HOOKFIX ##########
 Sửa lại LỜI DẪN mở đầu của một truyện audio drama tiếng Việt cho người nghe dễ hiểu hơn.
 NGUYÊN TẮC BẤT DI BẤT DỊCH: giữ nguyên mọi tình tiết, vai vế, mốc thời gian và con số đã có trong LỜI DẪN CŨ. GIỮ NGUYÊN tên riêng của nhân vật, gia đình, công ty và địa danh, kể cả tên Hán-Việt — đó là bối cảnh của truyện, không phải lỗi dịch. Không thêm tình tiết mới. Không hé lộ thêm bất cứ điều gì bản cũ đang giấu: không nói ra thủ đoạn, không nói ai thật sự đứng sau, không nói cái kết. Chỉ sửa CÁCH NÓI.
-NÓI CHO DỄ HIỂU — ĐÂY LÀ VIỆC CHÍNH:
+NÓI CHO DỄ HIỂU MÀ VẪN MƯỢT — ĐÂY LÀ VIỆC CHÍNH:
 - Từ đời thường trước. Có từ thuần Việt thay được thì đừng dùng từ Hán-Việt văn vẻ: "nghiệt ngã" thành "cay đắng", "an bài" thành "sắp đặt sẵn", "cơ hàn" thành "nghèo".
-- Mỗi câu chở đúng MỘT ý. Phần lớn câu dưới 20 chữ; câu nào dài hơn thì cắt đôi. Không viết câu ghép nhiều mệnh đề lồng nhau.
+- Câu dài rối thì VIẾT LẠI CHO GỌN, TUYỆT ĐỐI KHÔNG chặt làm đôi. Mỗi câu phải đứng được một mình, đủ chủ ngữ và vị ngữ. Không để lại mảnh cụt kiểu "Bước vào lễ đường in tên chị." — đó là mẩu vụn, không phải câu.
+- Nhịp phải xen kẽ: câu vừa để kể, câu ngắn để nhấn. Ba bốn câu ngắn liên tiếp nghe như đọc gạch đầu dòng chứ không phải kể chuyện. Nối ý bằng từ nối đời thường (rồi, mà, nhưng, vì, thế là) thay vì chấm câu liên tục.
+- Câu quá 25 chữ thường là dấu hiệu rối: gỡ mệnh đề lồng nhau ra, đừng chồng ba ý vào một câu.
 - Thay danh từ trừu tượng bằng thứ nhìn thấy được: đừng nói "bi kịch gia đình", hãy nói "mâm cơm không ai đụng đũa".
 - Xoá chữ hoa mỹ không thêm thông tin gì: "định mệnh", "trớ trêu thay", "ngậm ngùi", "xót xa thay", "dòng đời xô đẩy".
-- Người nghe không tua lại được: mỗi câu phải hiểu ngay lần đầu, không phải nghĩ lại.
+- Người nghe không tua lại được: phải hiểu ngay lần đầu, nhưng nghe ra là một người đang kể chuyện, không phải một bản tin.
 GIỮ ĐÚNG CÔNG THỨC CỦA THỂ LOẠI:
 - Vẫn mở đầu bằng một câu tục ngữ hoặc câu nói cửa miệng, rồi lật ngược nó bằng "Nhưng...".
 - Vẫn gọi nhân vật bằng vai (người mẹ, đứa con trai, cô con dâu), KHÔNG thêm tên riêng vào.
