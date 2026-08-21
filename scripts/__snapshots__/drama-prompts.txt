@@ -28,7 +28,7 @@ Chỉ JSON {"chapters":[...]}. Không Markdown. BIBLE:
 <BIBLE>
 
 ########## SC ##########
-Chia chương thành đúng 5 cảnh. Mỗi cảnh PHẢI có scene là số nguyên 1..COUNT, title là tên cảnh, location, characters, purpose, conflict, emotionalChange, reveal, endingBeat, estimatedWords, povCharacter, pronounRegister, signatureProp, newIncident.
+Chia chương thành đúng 5 cảnh. Mỗi cảnh PHẢI có scene là số nguyên 1..5, title là tên cảnh, location, characters, purpose, conflict, emotionalChange, reveal, endingBeat, estimatedWords, povCharacter, pronounRegister, signatureProp, newIncident.
 - povCharacter: cảnh này nhìn từ mắt ai.
 - pronounRegister: cách xưng hô giữa hai nhân vật chính của cảnh, chọn theo nhiệt độ quan hệ: "anh-em" khi còn tình, "tôi-cô" hoặc "tôi-anh" khi đã lạnh và đang cãi, "mày-tao" khi đã vỡ và có bạo lực. Phải khớp với conflict của cảnh.
 - signatureProp: MỘT đạo cụ đời thường Việt Nam cụ thể được cầm, dùng hoặc làm hỏng trong cảnh (cái điếu cày, chậu nước lá, xe đạp điện, cuốn sổ nợ, phích nước, mâm cơm nguội). Không được là đồ chung chung.
