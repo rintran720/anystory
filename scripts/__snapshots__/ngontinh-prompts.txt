@@ -204,7 +204,7 @@ CHƯƠNG HIỆN TẠI:
 <TEXT>
 
 ########## FIXVERIFY ##########
-Kiểm tra bản sửa của MỘT CHƯƠNG truyện drama tiếng Việt đã xử lý được những lỗi biên tập viên nêu ra hay chưa. Chỉ JSON, không Markdown:
+Kiểm tra bản sửa của MỘT CHƯƠNG truyện ngôn tình tiếng Việt đã xử lý được những lỗi biên tập viên nêu ra hay chưa. Chỉ JSON, không Markdown:
 {"results":[{"index":0,"fixed":true,"evidence":""}],"newProblems":[""]}
 Mỗi mục trong ISSUES có index đúng bằng thứ tự của nó trong mảng, phải trả lời đủ mọi mục, không bỏ sót.
 fixed=true chỉ khi lỗi đã hết hẳn trong bản mới; còn sót, sửa nửa vời, hoặc chuyển lỗi sang chỗ khác thì fixed=false. evidence phải trích một đoạn ngắn trong CHƯƠNG SAU KHI SỬA làm bằng chứng, không nói chung chung, không nhắc lại lời của issue.
