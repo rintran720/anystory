@@ -83,6 +83,26 @@ Viết LỜI DẪN mở đầu cho truyện audio tiếng Việt, khoảng 14400
 OUTLINE:
 <OUTLINE>
 
+########## HOOKFIX ##########
+Sửa lại LỜI DẪN mở đầu của một truyện audio drama tiếng Việt cho người nghe dễ hiểu hơn.
+NGUYÊN TẮC BẤT DI BẤT DỊCH: giữ nguyên mọi tình tiết, vai vế, mốc thời gian và con số đã có trong LỜI DẪN CŨ. GIỮ NGUYÊN tên riêng của nhân vật, gia đình, công ty và địa danh, kể cả tên Hán-Việt — đó là bối cảnh của truyện, không phải lỗi dịch. Không thêm tình tiết mới. Không hé lộ thêm bất cứ điều gì bản cũ đang giấu: không nói ra thủ đoạn, không nói ai thật sự đứng sau, không nói cái kết. Chỉ sửa CÁCH NÓI.
+NÓI CHO DỄ HIỂU — ĐÂY LÀ VIỆC CHÍNH:
+- Từ đời thường trước. Có từ thuần Việt thay được thì đừng dùng từ Hán-Việt văn vẻ: "nghiệt ngã" thành "cay đắng", "an bài" thành "sắp đặt sẵn", "cơ hàn" thành "nghèo".
+- Mỗi câu chở đúng MỘT ý. Phần lớn câu dưới 20 chữ; câu nào dài hơn thì cắt đôi. Không viết câu ghép nhiều mệnh đề lồng nhau.
+- Thay danh từ trừu tượng bằng thứ nhìn thấy được: đừng nói "bi kịch gia đình", hãy nói "mâm cơm không ai đụng đũa".
+- Xoá chữ hoa mỹ không thêm thông tin gì: "định mệnh", "trớ trêu thay", "ngậm ngùi", "xót xa thay", "dòng đời xô đẩy".
+- Người nghe không tua lại được: mỗi câu phải hiểu ngay lần đầu, không phải nghĩ lại.
+GIỮ ĐÚNG CÔNG THỨC CỦA THỂ LOẠI:
+- Vẫn mở đầu bằng một câu tục ngữ hoặc câu nói cửa miệng, rồi lật ngược nó bằng "Nhưng...".
+- Vẫn gọi nhân vật bằng vai (người mẹ, đứa con trai, cô con dâu), KHÔNG thêm tên riêng vào.
+- Vẫn đủ 6 bước như bản cũ: tục ngữ lật ngược, cảnh mở đầu, thứ đã mất, hình ảnh motif, câu hỏi kịch tính, câu bắc cầu quay ngược thời gian.
+- Cảnh mở đầu vẫn kể ở thì hiện tại và vẫn giữ MỘT câu thoại trong ngoặc kép.
+- Vẫn gọi người nghe là "quý vị" hoặc "bạn", và câu cuối cùng vẫn đúng là "Mời quý vị cùng lắng nghe." — không đổi một chữ, không thêm gì sau nó.
+Độ dài: khoảng 14400 từ và TUYỆT ĐỐI không quá 14400 cộng thêm 15%. Bản cũ dài hơn mức đó thì phải cắt xuống cho vừa — cắt chữ thừa và câu rườm, KHÔNG cắt tình tiết. Chỗ nào bản cũ đã hay thì để yên, đừng viết khác đi cho có. OUTPUT là lời dẫn hoàn chỉnh đã sửa, văn bản thuần, không Markdown, không tiêu đề, không "Dưới đây là", không giải thích đã sửa gì. LỜI DẪN CŨ:
+<HOOK>
+BIBLE:
+<BIBLE>
+
 ########## OUTRO ##########
 Viết LỜI KẾT cho truyện audio tiếng Việt, khoảng 14400 từ, để đọc voice-over. Đi đúng 5 bước:
 1. Mở bằng "Quý thính giả thân mến," rồi chốt lại hình ảnh cuối cùng của truyện trong 1-2 câu.

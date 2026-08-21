@@ -11,6 +11,7 @@ const VARS: Record<string, string> = {
   COUNT: "5", CHAPTER: "<CHAPTER>", MEMORY: "<MEMORY>", SCENE: "<SCENE>",
   USED: "<USED>", RECENT: "<RECENT>", OUTLINE: "<OUTLINE>", ENDING: "<ENDING>",
   DRAFT: "<DRAFT>", STORY: "<STORY>", TEXT: "<TEXT>", TOTAL: "6", ISSUES: "<ISSUES>",
+  HOOK: "<HOOK>",
   SET_NAMES: "<SET_NAMES>", SET_DETAIL: "<SET_DETAIL>", SET_PROP: "<SET_PROP>",
   SET_PROVERB: "<SET_PROVERB>", SET_FOREIGN: "<SET_FOREIGN>"
 };
@@ -18,7 +19,7 @@ const VARS: Record<string, string> = {
 const g = getGenre(process.argv[2] ?? "drama");
 
 const PROMPTS: [string, string][] = [
-  ["ARCH", g.ARCH], ["OUT", g.OUT], ["SC", g.SC], ["WR", g.WR], ["HOOK", g.HOOK], ["OUTRO", g.OUTRO],
+  ["ARCH", g.ARCH], ["OUT", g.OUT], ["SC", g.SC], ["WR", g.WR], ["HOOK", g.HOOK], ["HOOKFIX", g.HOOKFIX], ["OUTRO", g.OUTRO],
   ["MEM", g.MEM], ["EDIT", g.EDIT], ["CHECK", g.CHECK], ["REVIEW_CH", g.REVIEW_CH],
   ["REVIEW_SUM", g.REVIEW_SUM], ["FIXCH", g.FIXCH], ["FIXVERIFY", g.FIXVERIFY]
 ];

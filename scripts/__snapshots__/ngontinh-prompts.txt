@@ -90,6 +90,25 @@ TUYỆT ĐỐI KHÔNG dùng tục ngữ, KHÔNG gọi người nghe là "quý v�
 OUTLINE:
 <OUTLINE>
 
+########## HOOKFIX ##########
+Sửa lại LỜI MỞ của một truyện audio ngôn tình tiếng Việt cho người nghe dễ hiểu hơn.
+NGUYÊN TẮC BẤT DI BẤT DỊCH: giữ nguyên mọi tình tiết, vai vế, mốc thời gian và con số đã có trong LỜI DẪN CŨ. GIỮ NGUYÊN tên riêng của nhân vật, gia đình, công ty và địa danh, kể cả tên Hán-Việt — đó là bối cảnh của truyện, không phải lỗi dịch. Không thêm tình tiết mới. Không hé lộ thêm bất cứ điều gì bản cũ đang giấu: không nói ra thủ đoạn, không nói ai thật sự đứng sau, không nói cái kết. Chỉ sửa CÁCH NÓI.
+NÓI CHO DỄ HIỂU — ĐÂY LÀ VIỆC CHÍNH:
+- Từ đời thường trước. Có từ thuần Việt thay được thì đừng dùng từ Hán-Việt văn vẻ: "nghiệt ngã" thành "cay đắng", "an bài" thành "sắp đặt sẵn", "cơ hàn" thành "nghèo".
+- Mỗi câu chở đúng MỘT ý. Phần lớn câu dưới 20 chữ; câu nào dài hơn thì cắt đôi. Không viết câu ghép nhiều mệnh đề lồng nhau.
+- Thay danh từ trừu tượng bằng thứ nhìn thấy được: đừng nói "bi kịch gia đình", hãy nói "mâm cơm không ai đụng đũa".
+- Xoá chữ hoa mỹ không thêm thông tin gì: "định mệnh", "trớ trêu thay", "ngậm ngùi", "xót xa thay", "dòng đời xô đẩy".
+- Người nghe không tua lại được: mỗi câu phải hiểu ngay lần đầu, không phải nghĩ lại.
+GIỮ ĐÚNG CÔNG THỨC CỦA THỂ LOẠI:
+- Vẫn là chính giọng nữ chính xưng "tôi" tự kể, KHÔNG được đổi thành giọng người dẫn chương trình.
+- Vẫn đủ 3 bước như bản cũ: câu thú nhận mở đầu, tình thế trớ trêu đã đẩy nữ chính vào đó, câu hứa cảm xúc dẫn thẳng vào chương 1.
+- TUYỆT ĐỐI KHÔNG thêm tục ngữ, KHÔNG gọi người nghe là "quý vị", KHÔNG thêm câu mời nghe của người dẫn chương trình vào cuối.
+- KHÔNG hé lộ bí mật của nam chính và không hé lộ cái kết.
+Độ dài: khoảng 14400 từ và TUYỆT ĐỐI không quá 14400 cộng thêm 15%. Bản cũ dài hơn mức đó thì phải cắt xuống cho vừa — cắt chữ thừa và câu rườm, KHÔNG cắt tình tiết. Chỗ nào bản cũ đã hay thì để yên, đừng viết khác đi cho có. OUTPUT là lời dẫn hoàn chỉnh đã sửa, văn bản thuần, không Markdown, không tiêu đề, không "Dưới đây là", không giải thích đã sửa gì. LỜI MỞ CŨ:
+<HOOK>
+BIBLE:
+<BIBLE>
+
 ########## OUTRO ##########
 Viết LỜI KẾT NGẮN cho truyện audio ngôn tình tiếng Việt, khoảng 14400 từ, để đọc voice-over. Đây là lời của kênh nói với người nghe sau khi truyện đã hết, KHÔNG phải một bài bình luận. Đi đúng 3 bước:
 1. Một câu chốt lại hình ảnh cuối cùng của truyện.

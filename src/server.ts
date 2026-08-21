@@ -3,7 +3,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { EventEmitter } from "node:events";
 import { exists } from "./utils.js";
-import { generateStory, reviewStory, fixStory, needsFix } from "./pipeline.js";
+import { generateStory, reviewStory, fixStory, needsFix, saveHook, rewriteHook } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
 import { GENRES, SETTINGS_LIST, getGenre, resolveSetting } from "./prompts/index.js";
@@ -315,6 +315,8 @@ app.get("/api/stories/:name", async (req, res) => {
   const bible = await readJSONIfExists(path.join(dir, "story_bible.json"));
   const outline = await readJSONIfExists(path.join(dir, "outline.json"));
   const hasFinalStory = await exists(path.join(dir, "final_story.txt"));
+  const hookFile = path.join(dir, "hook.txt");
+  const hook = (await exists(hookFile)) ? await fs.readFile(hookFile, "utf8") : null;
   const audioDir = path.join(dir, "tts", "audio");
   const audioFiles = (await exists(audioDir))
     ? (await fs.readdir(audioDir)).filter(f => f.endsWith(".wav")).sort()
@@ -329,7 +331,7 @@ app.get("/api/stories/:name", async (req, res) => {
   const staleChapters = await staleReviewChapters(dir, review, fixReport);
   const completedChapters = (await fs.readdir(dir).catch(() => [])).filter(f => /^chapter-\d+\.txt$/.test(f)).length;
 
-  res.json({ name: req.params.name, bible, hasBible: await hasBible(dir), outline, hasFinalStory, audioFiles, finalAudio, review, fixReport, needsFixChapters, staleChapters, completedChapters });
+  res.json({ name: req.params.name, bible, hasBible: await hasBible(dir), outline, hasFinalStory, hook, audioFiles, finalAudio, review, fixReport, needsFixChapters, staleChapters, completedChapters });
 });
 
 type QueueResult =
@@ -426,6 +428,34 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
 // Chấm điểm và sửa chương chạy như job bình thường, nên dùng lại được cả hàng đợi,
 // SSE, nút Dừng và trần maxParallelStories. force=true: bấm nút là chạy lại thật,
 // cache theo file chỉ còn phục vụ đường tự động cuối generateStory.
+// Nguồn/model chọn ngay tại nút, dùng chung cho job xếp hàng và cho việc chạy thẳng: chỉ
+// áp cho lượt này, không ghi vào settings.json. Lựa chọn tại chỗ thắng editorModel, vì
+// editorModel là tên model gắn với provider đang cài đặt và sẽ vô nghĩa nếu lượt này chạy
+// sang provider khác.
+async function taskConfig(override: { provider?: string; model?: string }): Promise<
+  { ok: true; config: Config } | { ok: false; status: number; error: string }
+> {
+  const c: Config = { ...config, ...(await loadSettingsOverrides()) };
+  const provider = override.provider;
+  if (provider) {
+    if (provider !== "ollama" && provider !== "deepseek" && provider !== "claude") {
+      return { ok: false, status: 400, error: `provider không hợp lệ: ${provider}` };
+    }
+    c.provider = provider;
+  }
+  if (override.provider || override.model) c.editorModel = "";
+  if (override.model) {
+    const model = String(override.model).trim();
+    if (c.provider === "deepseek") c.deepseek = { ...c.deepseek, model };
+    else if (c.provider === "claude") c.claude = { model };
+    else c.model = model;
+  }
+  if (c.provider === "deepseek" && !c.deepseek.apiKey.trim()) {
+    return { ok: false, status: 400, error: "chưa có DeepSeek API key trong Cài đặt" };
+  }
+  return { ok: true, config: c };
+}
+
 async function queueStoryTask(rawName: string, kind: "review" | "fix", override: { provider?: string; model?: string; selection?: Record<string, number[]>; maxRounds?: number } = {}) {
   const name = String(rawName ?? "").trim();
   if (!name) return { ok: false as const, status: 400, error: "name is required" };
@@ -447,29 +477,10 @@ async function queueStoryTask(rawName: string, kind: "review" | "fix", override:
     return { ok: false as const, status: 400, error: "chưa có báo cáo review - chấm điểm trước đã" };
   }
 
-  const jobConfig: Config = { ...config, ...(await loadSettingsOverrides()) };
+  const resolved = await taskConfig(override);
+  if (!resolved.ok) return { ok: false as const, status: resolved.status, error: resolved.error };
+  const jobConfig = resolved.config;
   maxParallelStories = jobConfig.maxParallelStories;
-
-  // Chọn nguồn/model ngay tại nút: chỉ áp cho lượt chạy này, không ghi vào settings.json.
-  // Lựa chọn tại chỗ thắng editorModel, vì editorModel gắn với provider đang cài đặt và
-  // sẽ là tên model vô nghĩa nếu lượt này chạy sang provider khác.
-  const provider = override.provider;
-  if (provider) {
-    if (provider !== "ollama" && provider !== "deepseek" && provider !== "claude") {
-      return { ok: false as const, status: 400, error: `provider không hợp lệ: ${provider}` };
-    }
-    jobConfig.provider = provider;
-  }
-  if (override.provider || override.model) jobConfig.editorModel = "";
-  if (override.model) {
-    const model = String(override.model).trim();
-    if (jobConfig.provider === "deepseek") jobConfig.deepseek = { ...jobConfig.deepseek, model };
-    else if (jobConfig.provider === "claude") jobConfig.claude = { model };
-    else jobConfig.model = model;
-  }
-  if (jobConfig.provider === "deepseek" && !jobConfig.deepseek.apiKey.trim()) {
-    return { ok: false as const, status: 400, error: "chưa có DeepSeek API key trong Cài đặt" };
-  }
   const usedModel = jobConfig.provider === "deepseek" ? jobConfig.deepseek.model
     : jobConfig.provider === "claude" ? jobConfig.claude.model
     : jobConfig.model;
@@ -534,6 +545,40 @@ app.post("/api/fix/:name", async (req, res) => {
   if (!result.ok) return res.status(result.status).json({ error: result.error });
   pump();
   res.json({ queued: result.name });
+});
+
+// Lời dẫn sửa được ngay tại chỗ. Lưu tay không gọi model; viết lại tốn đúng MỘT lượt gọi,
+// nên nó chạy thẳng chứ không xếp hàng: hàng đợi có để ghìm những việc gọi model hàng chục
+// lượt, thêm một loại job nữa cho việc chờ chưa tới một phút thì đắt hơn phần lợi.
+// Cả hai đều dựng lại final_story.txt, vì đổi hook.txt mà không dựng lại thì file người
+// dùng đọc và file TTS đọc vẫn là lời dẫn cũ - sửa mà như không sửa.
+app.put("/api/hook/:name", async (req, res) => {
+  const dir = resolveUnder(path.resolve("output"), req.params.name);
+  if (!dir) return res.status(400).json({ error: "invalid name" });
+  if (!(await exists(path.join(dir, "outline.json")))) {
+    return res.status(400).json({ error: "truyện chưa có outline" });
+  }
+  try {
+    res.json(await saveHook(dir, String(req.body?.text ?? "")));
+  } catch (err: any) {
+    res.status(400).json({ error: String(err?.message ?? err) });
+  }
+});
+
+app.post("/api/hook/:name", async (req, res) => {
+  const dir = resolveUnder(path.resolve("output"), req.params.name);
+  if (!dir) return res.status(400).json({ error: "invalid name" });
+  if (!(await exists(path.join(dir, "story_bible.json")))) {
+    return res.status(400).json({ error: "truyện chưa có Story Bible" });
+  }
+  const resolved = await taskConfig(req.body ?? {});
+  if (!resolved.ok) return res.status(resolved.status).json({ error: resolved.error });
+  try {
+    console.log(`[HOOK] ${req.params.name} — viết lại lời dẫn`);
+    res.json(await rewriteHook(resolved.config, dir));
+  } catch (err: any) {
+    res.status(500).json({ error: String(err?.message ?? err).replace(/^HET_KHA_NANG: /, "") });
+  }
 });
 
 // Nhận một truyện ({name, idea|ideaFile, ...}) hoặc nhiều truyện cùng lúc

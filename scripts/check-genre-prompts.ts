@@ -63,7 +63,7 @@ for (const g of [d, n])
 // đỏ. Trước vòng sửa thứ hai, nó xanh.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const NAMES = ["ARCH","OUT","SC","WR","HOOK","OUTRO","MEM","EDIT","CHECK","REVIEW_CH","REVIEW_SUM","FIXCH","FIXVERIFY"] as const;
+const NAMES = ["ARCH","OUT","SC","WR","HOOK","HOOKFIX","OUTRO","MEM","EDIT","CHECK","REVIEW_CH","REVIEW_SUM","FIXCH","FIXVERIFY"] as const;
 const wrRules = (s: string) => s.split("\n").filter(l => /^\d+\. /.test(l));
 
 // WR là chữ ký của thể loại: số quy tắc, quy tắc riêng, và quy tắc của thể loại kia
@@ -146,6 +146,28 @@ for (const g of [d, n]) {
     }
 }
 must(!n.HOOK.includes("{{SET_PROVERB}}"), "ngontinh HOOK now carries {{SET_PROVERB}} — its hook is not allowed to open on a proverb");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOOKFIX viết lại lời dẫn cho dễ nghe. Nó chạy NGOÀI pipeline sinh truyện, từ một nút
+// bấm, nên không có stage nào phía sau đỡ lỗi giúp: prompt sai là ghi đè thẳng hook.txt.
+const HOOKFIX_VARS = new Set(["{{HOOK}}", "{{BIBLE}}", "{{WORDS}}"]);
+for (const g of [d, n]) {
+  for (const v of HOOKFIX_VARS)
+    must(g.HOOKFIX.includes(v), `${g.id} HOOKFIX no longer carries ${v} — rewriteHook fills it, so the prompt would lose it silently`);
+  // rewriteHook điền đúng ba biến trên và không điền gì khác. Biến thứ tư lọt vào đây sẽ
+  // được gửi nguyên chữ {{...}} cho model. Đây cũng là chốt chặn cho {{SET_FOREIGN}}:
+  // HOOKFIX cố ý không biết bối cảnh, vì câu dọn "từ nước ngoài" chính là thứ từng suýt
+  // xoá sạch tên nhân vật Trung Quốc khỏi một chương đã viết xong.
+  for (const m of g.HOOKFIX.matchAll(/\{\{[A-Z_]+\}\}/g))
+    must(HOOKFIX_VARS.has(m[0]), `${g.id} HOOKFIX uses ${m[0]}, which rewriteHook never fills — it ships to the model literally`);
+  must(g.HOOKFIX.includes("NÓI CHO DỄ HIỂU"), `${g.id} HOOKFIX lost the plain-language block, which is the entire point of the button`);
+  must(g.HOOKFIX.includes("GIỮ NGUYÊN tên riêng"), `${g.id} HOOKFIX no longer protects the cast's proper names`);
+  must(g.HOOKFIX.includes("không nói cái kết"), `${g.id} HOOKFIX no longer forbids spoiling the ending`);
+}
+must(d.HOOKFIX.includes("Mời quý vị cùng lắng nghe."), "drama HOOKFIX lets the rewrite drop the channel's fixed closing line");
+must(!n.HOOKFIX.includes("Mời quý vị cùng lắng nghe."), "ngontinh HOOKFIX pastes the drama channel's closing line into a romance");
+must(n.HOOKFIX.includes('xưng "tôi"'), "ngontinh HOOKFIX no longer holds the heroine's first-person voice");
+must(!d.HOOKFIX.includes("nữ chính"), "drama HOOKFIX has picked up the romance spine's heroine");
 
 // Mỗi SettingPack phải đủ chữ: một trường rỗng không làm gì đổ, nó chỉ lặng lẽ dán một
 // khoảng trắng vào đúng chỗ đáng ra phải mô tả cả một thế giới.

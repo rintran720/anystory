@@ -464,6 +464,7 @@ async function refreshReviewPanel(name) {
   document.getElementById("btn-view-outline").hidden = !data.outline;
   document.getElementById("btn-view-review").hidden = !data.review;
   setReviewActions(data);
+  setHookPanel(data);
   return data;
 }
 
@@ -579,6 +580,74 @@ document.getElementById("field-fix-rounds").addEventListener("input", () => {
 
 document.getElementById("btn-review").addEventListener("click", () => runStoryTask("review"));
 document.getElementById("btn-fix").addEventListener("click", () => runStoryTask("fix"));
+
+// Ô soạn thảo hiện đúng hook.txt đang có trên đĩa. Chỉ nạp lại khi người dùng chưa động
+// vào ô; nếu họ đang gõ dở thì để yên, vì mất một đoạn vừa gõ khó chịu hơn nhiều so với
+// nhìn bản cũ chậm một nhịp.
+function setHookPanel(data) {
+  const panel = document.getElementById("hook-panel");
+  panel.hidden = !data.hook;
+  if (!data.hook) return;
+  const box = document.getElementById("hook-text");
+  if (box.value === (state.hookLoaded ?? "")) {
+    box.value = data.hook;
+    state.hookLoaded = data.hook;
+  }
+  // Đổi lời dẫn là dựng lại final_story.txt, nhưng file audio đã đọc xong thì không tự
+  // đổi theo. Nói ra chứ không tự xoá: file audio là thứ tốn hàng giờ để dựng lại.
+  const warn = document.getElementById("hook-warning");
+  const hasAudio = Boolean((data.audioFiles && data.audioFiles.length) || data.finalAudio);
+  warn.hidden = !hasAudio;
+  warn.textContent = hasAudio
+    ? "Truyện này đã có file audio. Đổi lời dẫn xong, audio cũ vẫn đọc bản cũ - phải chạy lại TTS mới khớp."
+    : "";
+}
+
+async function runHookAction(method, label, busyText) {
+  const name = state.currentStoryName;
+  if (!name) return;
+  const box = document.getElementById("hook-text");
+  const msg = document.getElementById("hook-message");
+  const saveBtn = document.getElementById("btn-hook-save");
+  const rewriteBtn = document.getElementById("btn-hook-rewrite");
+  saveBtn.disabled = true;
+  rewriteBtn.disabled = true;
+  msg.hidden = false;
+  msg.className = "hint";
+  msg.textContent = busyText;
+  try {
+    const body = method === "PUT"
+      ? { text: box.value }
+      : {
+          provider: document.getElementById("field-task-provider").value || undefined,
+          model: document.getElementById("field-task-model").value || undefined
+        };
+    const res = await fetch(`/api/hook/${encodeURIComponent(name)}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    box.value = data.hook;
+    state.hookLoaded = data.hook;
+    msg.className = "success";
+    msg.textContent = data.chaptersFound < data.total
+      ? `${label} Truyện mới có ${data.chaptersFound}/${data.total} chương nên chưa dựng lại file truyện hoàn chỉnh.`
+      : `${label} Đã dựng lại file truyện hoàn chỉnh. Bản trước nằm ở pre-fix/hook.txt.`;
+  } catch (err) {
+    msg.className = "error";
+    msg.textContent = String(err.message || err);
+  } finally {
+    saveBtn.disabled = false;
+    rewriteBtn.disabled = false;
+  }
+}
+
+document.getElementById("btn-hook-save").addEventListener("click",
+  () => runHookAction("PUT", "Đã lưu lời dẫn.", "Đang lưu..."));
+document.getElementById("btn-hook-rewrite").addEventListener("click",
+  () => runHookAction("POST", "Đã viết lại lời dẫn.", "Đang viết lại, việc này mất một lúc..."));
 
 document.getElementById("btn-view-bible").addEventListener("click", () => {
   const el = document.getElementById("bible-text");
