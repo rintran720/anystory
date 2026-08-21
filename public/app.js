@@ -107,12 +107,25 @@ async function openCreateForm(prefillName) {
   settingSelect.innerHTML = (defaults.settings ?? []).map(s => `<option value="${s.id}">${s.label}</option>`).join("");
   settingSelect.value = defaults.setting ?? "auto";
 
-  // prefillName chỉ có khi mở form để CHẠY TIẾP một truyện đã có trên đĩa. Thể loại và
-  // bối cảnh của truyện đó đã bị đóng dấu vào story_bible.json và server bỏ qua mọi giá
-  // trị gửi lên, nên hiện hai ô này ra là nói dối người dùng theo cả hai chiều. Giấu hẳn,
-  // và ô bị giấu cũng không được gửi lên (xem handler submit).
-  document.getElementById("field-genre-wrap").hidden = Boolean(prefillName);
-  document.getElementById("field-setting-wrap").hidden = Boolean(prefillName);
+  // Điều kiện phải TRÙNG KHÍT với cái server dùng để khoá: story_bible.json đã tồn tại
+  // hay chưa - không phải "form có sẵn tên hay không". Truyện chết ngay ở ARCH chưa kịp
+  // ghi bible vẫn mở bằng đúng form này, và nó vẫn được quyền chọn thể loại; giấu ô đi
+  // là âm thầm ép nó về mặc định. Có bible thì ngược lại: server bỏ qua mọi giá trị gửi
+  // lên, nên hiện ô ra là nói dối. Hỏi thẳng server câu đó qua hasBible.
+  const locked = prefillName ? await storyHasBible(prefillName) : false;
+  document.getElementById("field-genre-wrap").hidden = locked;
+  document.getElementById("field-setting-wrap").hidden = locked;
+}
+
+// Trả lời của server cho đúng câu hỏi server tự hỏi. Hỏi không được (truyện chưa có thư
+// mục, mạng lỗi) thì coi như chưa có bible: hiện ô ra, và nếu đoán sai thì server vẫn là
+// chốt chặn cuối - nó bỏ qua giá trị gửi lên. Sai theo chiều này chỉ thừa một ô; sai theo
+// chiều kia là mất quyền chọn thể loại mà không nói gì.
+async function storyHasBible(name) {
+  const res = await fetch(`/api/stories/${encodeURIComponent(name)}`).catch(() => null);
+  if (!res || !res.ok) return false;
+  const data = await res.json().catch(() => null);
+  return Boolean(data?.hasBible);
 }
 
 // Ô đang bị giấu (chạy tiếp một truyện cũ) thì không gửi giá trị của nó lên.

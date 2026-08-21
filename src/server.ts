@@ -15,6 +15,14 @@ app.use(express.json());
 app.use(express.static(path.resolve("public")));
 app.use("/output", express.static(path.resolve("output")));
 
+// Một câu hỏi duy nhất, hỏi ở cả hai đầu: "truyện này đã có bible chưa?". Server khoá
+// thể loại/bối cảnh khi câu trả lời là có; màn hình tạo truyện giấu hai ô chọn khi câu
+// trả lời là có, và nó hỏi ĐÚNG câu này qua hasBible của /api/stories/:name chứ không
+// hỏi một câu gần giống (kiểu "form có sẵn tên không"). Hai câu khác nhau là có khe:
+// truyện chết ngay ở ARCH chưa kịp ghi bible sẽ bị giấu mất ô chọn thể loại trong khi
+// server vẫn sẵn sàng nhận.
+const hasBible = (dir: string) => exists(path.join(dir, "story_bible.json"));
+
 function resolveUnder(root: string, name: string): string | null {
   const p = path.resolve(root, name);
   return p === root || p.startsWith(root + path.sep) ? p : null;
@@ -321,7 +329,7 @@ app.get("/api/stories/:name", async (req, res) => {
   const staleChapters = await staleReviewChapters(dir, review, fixReport);
   const completedChapters = (await fs.readdir(dir).catch(() => [])).filter(f => /^chapter-\d+\.txt$/.test(f)).length;
 
-  res.json({ name: req.params.name, bible, outline, hasFinalStory, audioFiles, finalAudio, review, fixReport, needsFixChapters, staleChapters, completedChapters });
+  res.json({ name: req.params.name, bible, hasBible: await hasBible(dir), outline, hasFinalStory, audioFiles, finalAudio, review, fixReport, needsFixChapters, staleChapters, completedChapters });
 });
 
 type QueueResult =
@@ -342,7 +350,7 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
 
   const outDir = resolveUnder(path.resolve("output"), name);
   if (!outDir) return { ok: false, name, status: 400, error: "invalid name" };
-  const bibleExists = await exists(path.join(outDir, "story_bible.json"));
+  const bibleExists = await hasBible(outDir);
 
   let ideaText = "";
   if (input.idea && String(input.idea).trim()) {
