@@ -60,6 +60,20 @@ const repair = compareProse(choppy, smooth, { maxWords: 80 });
 must(repair.ok, `repairing a choppy hook was rejected: ${repair.regressions.join(" | ")}`);
 must(repair.gains.some(g => g.includes("câu vụn")), `repair should be credited with merging fragments: ${repair.gains.join(" | ")}`);
 
+// ── Khe đếm phải co giãn theo độ dài ───────────────────────────────────────────
+// Cùng một luật phải phục vụ hai cỡ văn bản khác nhau hàng chục lần. Không co giãn thì
+// nó vừa quá chặt với chương (trả về bản gốc vì nhiễu vài câu) vừa đúng độ với lời dẫn.
+const sentence = (n: number) => Array.from({ length: n }, (_, i) => `Người đàn bà ngồi xuống bên hiên và nhìn ra khoảng sân vắng lặng số ${i}.`).join(" ");
+const fragment = (n: number) => Array.from({ length: n }, () => "Bà ngồi im.").join(" ");
+const chapterBefore = measureProse(sentence(200));
+must(chapterBefore.sentences === 200, `fixture drift: expected a 200-sentence chapter, measured ${chapterBefore.sentences}`);
+must(compareProse(chapterBefore, measureProse(sentence(196) + " " + fragment(4))).ok,
+  "a 200-sentence chapter was reverted over 4 short sentences — the gate is blocking noise");
+must(!compareProse(chapterBefore, measureProse(sentence(170) + " " + fragment(30))).ok,
+  "a chapter that gained 30 fragments passed the gate — the slack has swallowed a real regression");
+// Khe của lời dẫn phải vẫn bằng 0, nếu không mẫu CHOPPY (0 -> 2 câu vụn) sẽ lọt.
+must(Math.floor(orig.sentences / 25) === 0, `the hook-sized slack must stay 0, computed ${Math.floor(orig.sentences / 25)}`);
+
 // ── Chữ sáo rỗng và từ Hán-Việt văn vẻ ─────────────────────────────────────────
 const flowery = measureProse("Định mệnh nghiệt ngã đã an bài tất cả từ trước, trớ trêu thay cho một kiếp người mỏng manh.");
 must(flowery.flourish.length >= 2 && flowery.hardWords.length >= 2, `flourish detector missed obvious clichés: ${JSON.stringify(flowery)}`);

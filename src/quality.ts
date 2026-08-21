@@ -59,6 +59,12 @@ export interface ProseVerdict { ok: boolean; regressions: string[]; gains: strin
 // điều kiện giữ, vì đòi phải có `gains` sẽ vứt bỏ đúng những cải thiện mà nó mù.
 export function compareProse(before: ProseMetrics, after: ProseMetrics, opts: { maxWords?: number } = {}): ProseVerdict {
   const regressions: string[] = [], gains: string[] = [];
+  // Ngưỡng đếm phải co giãn theo độ dài đoạn văn, nếu không cùng một luật sẽ vừa quá chặt
+  // vừa quá lỏng: thêm MỘT câu vụn vào lời dẫn 3 câu là hỏng thật, thêm một câu vào chương
+  // 200 câu là nhiễu, và chặn nhiễu nghĩa là trả về bản gốc cho những bản sửa hoàn toàn tốt.
+  // floor(/25) cho lời dẫn đúng 0 (giữ nguyên độ chặt đã chứng minh trên mẫu thật) và cho
+  // chương dài vài trang khoảng 8 câu khe.
+  const slack = Math.floor(before.sentences / 25);
   // Trần độ dài phải so TƯƠNG ĐỐI như mọi luật khác, và phải có khe. Bản gốc do máy sinh
   // đã sát hoặc quá trần sẵn: chặn tuyệt đối thì mọi bản viết lại đều bị loại vì lỗi nó
   // không gây ra, kể cả bản mượt nhất. Chặn tương đối mà không có khe thì cũng hỏng theo
@@ -67,9 +73,9 @@ export function compareProse(before: ProseMetrics, after: ProseMetrics, opts: { 
   // cách nhanh nhất đẩy model về lại văn cụt.
   if (opts.maxWords && after.words > opts.maxWords && after.words - before.words > LENGTH_SLACK)
     regressions.push(`phình quá trần: ${before.words} -> ${after.words} từ, tối đa ${opts.maxWords}`);
-  if (after.shortSentences > before.shortSentences)
+  if (after.shortSentences > before.shortSentences + slack)
     regressions.push(`văn bị chặt vụn: ${after.shortSentences} câu dưới ${SHORT_SENTENCE} chữ (trước có ${before.shortSentences}), câu ngắn nhất ${after.minSentence} chữ`);
-  if (after.longSentences > before.longSentences)
+  if (after.longSentences > before.longSentences + slack)
     regressions.push(`câu rối thêm: ${after.longSentences} câu quá ${LONG_SENTENCE} chữ (trước có ${before.longSentences}), câu dài nhất ${after.maxSentence} chữ`);
   if (after.avgSentence < AVG_MIN && after.avgSentence < before.avgSentence)
     regressions.push(`nhịp câu tụt còn ${after.avgSentence} chữ/câu (trước ${before.avgSentence}), dưới mức ${AVG_MIN} là đọc như gạch đầu dòng`);
