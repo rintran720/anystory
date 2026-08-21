@@ -322,3 +322,74 @@ Không chạm: `src/ollama.ts` (validator vốn genre-agnostic), `src/tts/*`, `s
 - Cơ chế đọc thể loại từ file JSON ngoài để người dùng tự thêm.
 - Đổi thể loại của một truyện đã viết.
 - Chọn giọng TTS theo thể loại.
+
+---
+
+# Phụ lục A — Trục bối cảnh (setting), bổ sung 2026-08-21
+
+Yêu cầu phát sinh sau khi Task 1-3 đã chạy: truyện sinh ra phải lấy **bối cảnh Trung Quốc**.
+
+Quyết định: bối cảnh là **một trục riêng, tách khỏi thể loại**, chọn được khi tạo truyện.
+Lý do chọn tách thay vì khoá cứng vào thể loại: hai thứ này độc lập thật — drama gia đình
+có thể diễn ra ở Trung Quốc, ngôn tình sủng có thể Việt hoá — và khoá cứng thì lần đổi ý
+sau lại phải sửa prompt.
+
+## Ngôn ngữ ≠ bối cảnh
+
+**Ngôn ngữ kể vẫn luôn là tiếng Việt.** Đây là kênh audio tiếng Việt; chỉ thế giới trong
+truyện đổi. Mọi chỗ prompt ghi "tiếng Việt" (`Viết ... bằng TIẾNG VIỆT`, `thoại tự nhiên
+như người Việt nói`) là nói về ngôn ngữ và **giữ nguyên**. Chỉ 5 chỗ nói về *thế giới*
+mới đổi theo bối cảnh.
+
+Điều này khớp với video tham chiếu: "Gả Thay Chị Gái" kể bằng tiếng Việt nhưng nhân vật
+tên Tần Dịch Thâm, Tô Duyệt, Tô Nhã Dung, tập đoàn Tần Thị — bối cảnh Trung Quốc.
+
+## Năm điểm chèn
+
+| Biến | Prompt | Hiện tại | Vì sao phụ thuộc bối cảnh |
+|---|---|---|---|
+| `{{SET_NAMES}}` | `ARCH` | *(không có)* | Prompt hiện KHÔNG hề nói gì về quy ước đặt tên, nên model tự đặt tên Việt. Phải thêm mới, không phải thay. |
+| `{{SET_DETAIL}}` | `WR` quy tắc `chiTietViet` (core.ts) | "chi tiết đời sống **Việt Nam** có tên gọi cụ thể (món ăn, vật dụng, địa danh, thủ tục hành chính, chức danh)" | Danh mục đời sống cụ thể theo nước |
+| `{{SET_PROP}}` | `SC` `signatureProp` (drama.ts) | "đạo cụ đời thường **Việt Nam** cụ thể (cái điếu cày, chậu nước lá, xe đạp điện...)" | Ví dụ đạo cụ theo nước |
+| `{{SET_PROVERB}}` | `HOOK` drama (drama.ts) | "một câu tục ngữ hoặc định kiến quen thuộc của **người Việt**" | Kho tục ngữ theo nước |
+| `{{SET_FOREIGN}}` | `FIXCH` (core.ts) | "xoá sạch từ **nước ngoài, chữ Hán**, và các câu vô nghĩa kiểu dịch máy" | **Nguy hiểm nhất.** Với bối cảnh Trung Quốc, tên Hán-Việt (Tần Dịch Thâm, Tô Duyệt) là thứ PHẢI GIỮ. Để nguyên câu này thì khâu sửa chương sẽ tự xoá tên nhân vật khỏi truyện. |
+
+## Kiến trúc
+
+`src/prompts/settings.ts`:
+
+```ts
+export type SettingId="vietnam"|"china";
+export interface SettingPack{id:SettingId;label:string;names:string;detail:string;prop:string;proverb:string;foreign:string}
+export const SETTINGS:Record<SettingId,SettingPack>={...}
+export const settingVars=(id:SettingId)=>({SET_NAMES:...,SET_DETAIL:...,SET_PROP:...,SET_PROVERB:...,SET_FOREIGN:...})
+```
+
+`settingVars(id)` trả về object đúng dạng để trộn thẳng vào tham số của `P()`. `pipeline.ts`
+tính một lần rồi spread vào mọi lệnh gọi `P()`. Prompt vẫn là chuỗi tĩnh — không đổi
+`GenrePrompts`, không đổi `getGenre`.
+
+`GenrePrompts` thêm đúng một trường: `defaultSetting:SettingId` (drama → `vietnam`,
+ngontinh → `china`).
+
+`Config.setting:SettingId|"auto"`, mặc định `"auto"`. `"auto"` được giải thành
+`getGenre(genre).defaultSetting`. Nhờ đó chọn thể loại ngôn tình là tự ra bối cảnh Trung
+mà không phải chọn hai lần, nhưng vẫn ép được nếu muốn.
+
+Bible đóng dấu **giá trị đã giải**, không đóng dấu `"auto"`: `bible.settingId`. Bible cũ
+không có trường này đọc là `vietnam` — đúng với mọi truyện đã sinh trước đây.
+
+## Ảnh hưởng tới cổng byte-identical
+
+Snapshot drama **sẽ đổi** ở lần này, và đổi là đúng: 5 đoạn văn bản Việt Nam biến thành
+placeholder. Đây là thay đổi hành vi có chủ ý, khác hẳn Task 3 (refactor thuần). Diff của
+snapshot chính là thứ để review đọc và xác nhận đúng 5 chỗ đó đổi, không hơn.
+
+Thêm `scripts/__snapshots__/settings.txt` chụp nội dung hai `SettingPack`, để sau này sửa
+mô tả bối cảnh cũng nhìn thấy trong diff.
+
+## Ngoài phạm vi
+
+- Bối cảnh thứ ba (Hàn Quốc, phương Tây). Kiến trúc đỡ được: thêm một `SettingPack`.
+- Đổi bối cảnh của truyện đã viết.
+- Dịch/chuyển tên nhân vật của truyện cũ sang tên Trung.
