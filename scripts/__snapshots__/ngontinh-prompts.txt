@@ -1,0 +1,217 @@
+########## ARCH ##########
+Bạn là kiến trúc sư truyện ngôn tình. Thiết kế Story Bible bằng TIẾNG VIỆT cho một truyện ngôn tình hiện đại dài ĐÚNG 6 chương, mô-típ hôn nhân thay thế và tổng tài sủng vợ. Mọi trường có tên kết thúc bằng "Chapter" phải là số nguyên từ 1 đến 6. Gồm title,genre,theme,premise,tone,characters,setting,mainConflict,secondaryConflicts,moral,motif,heroineWound,maleLeadSecret,sweetLadder,doubtLadder,rival,familyGate,openingConfession,happyEnding,signatureLine,ledger,titleCandidates.
+- NGÔI KỂ: truyện kể ở ngôi thứ nhất, nữ chính xưng "tôi". characters phải ghi rõ ai là nữ chính (người kể chuyện) và ai là nam chính.
+- moral: luận đề của truyện gói trong ĐÚNG 1 câu về tình yêu và giá trị bản thân, dạng chân lý đời thường, không sáo rỗng, không lên lớp.
+- motif: {"object":"","firstMeaning":"","invertedMeaning":"","invertChapter":0} — MỘT vật chứng tình cảm CỤ THỂ lặp lại xuyên truyện (chiếc vòng cổ ngọc lam, tấm ảnh cũ kẹp trong sổ tay, con đường hoa sau nhà, ly hồng trà pha sẵn). Lần đầu mang nghĩa này, về sau CÙNG vật đó mang nghĩa ngược lại.
+- heroineWound: {"wound":"","healChapter":0} — vết thương gốc của nữ chính, dạng "tôi luôn là phương án dự phòng", "chưa ai từng chọn tôi trước". Vết thương này được CHỮA LÀNH ở healChapter chứ không phải bị vạch trần.
+- maleLeadSecret: {"character":"","memory":"","revealChapter":0} — vì sao nam chính đã chọn nữ chính TỪ TRƯỚC cuộc hôn nhân thay thế. memory phải là MỘT CẢNH CỤ THỂ có thời tiết, có một đạo cụ và một câu anh nhớ mãi (ví dụ: chiều mưa, chiếc ô đen, gói khăn giấy, "không phải vì em khóc mà vì em vẫn cố nhịn không khóc"). Khi tiết lộ ở revealChapter, mọi hành vi biết trước của anh từ đầu truyện phải được giải thích ngược lại.
+- sweetLadder: mảng 8-12 nấc thân mật tăng dần, mỗi nấc là MỘT VIỆC CỤ THỂ nam chính làm, và MỖI NẤC DÙNG MỘT CƠ CHẾ KHÁC NHAU: đoán trước nhu cầu, chuẩn bị sẵn mà không nói, bênh vực nơi đông người, chạm nhẹ có chủ ý, tặng thứ mang ký ức riêng, tự tay nấu ăn, ghen, hạ mình vì cô, tuyên bố trước gia tộc, cầu hôn lại. KHÔNG lặp lại cùng một cơ chế hai lần.
+- doubtLadder: mảng 5-8 nấc nghi ngờ của nữ chính, tất cả xoay quanh nỗi sợ "mình chỉ là người thay thế", mỗi nấc đến từ MỘT NGUỒN KHÁC NHAU: lời chị gái, tin đồn nơi làm việc, một tấm ảnh cũ, thái độ mẹ chồng, một bài báo, một cuộc gọi nghe được. Đây là thứ giữ chân người nghe: phải nặng dần rồi mới được gỡ.
+- rival: {"character":"","relation":"","tactic":"","showdownChapter":0} — người muốn giành lại vị trí bên nam chính (chị gái bỏ trốn quay về, người cũ, con gái đối tác). tactic là cách cô ta ra tay, phải cụ thể chứ không phải "gây khó dễ".
+- familyGate: {"opponent":"","objection":"","confrontChapter":0} — cửa ải gia tộc nhà nam chính. Ở confrontChapter, nam chính công khai bênh nữ chính trước mặt cả nhà bằng một câu dứt khoát.
+- openingConfession: {"line":"","promise":""} — line là câu mở truyện ở NGÔI 1, dạng "Tôi chưa bao giờ nghĩ sẽ có ngày..." nêu đúng tình thế trớ trêu. promise là lời hứa cảm xúc khiến người nghe ở lại, dạng "người đứng cuối lễ đường hôm ấy nhìn tôi như thể đã chờ tôi suốt cả cuộc đời". TUYỆT ĐỐI KHÔNG hé lộ maleLeadSecret.
+- happyEnding: {"scene":"","callback":""} — scene là cảnh kết hạnh phúc CỤ THỂ (lễ cưới nhỏ trong vườn, tuần trăng mật ở thị trấn biển). callback là MỘT câu gọi lại openingConfession, dạng "Lần trước là em bị ép, lần này là em tự nguyện".
+- signatureLine: câu thoại sát thương chủ đạo của nam chính, đại diện cho cả truyện, dưới 20 chữ.
+- ledger: mảng 5-8 con số CỤ THỂ neo cả truyện (số tháng của hôn nhân hợp đồng, số lần anh từng gặp cô trước đó, tuổi, năm học, giờ hẹn, số tầng). Mọi cảnh về sau phải dùng đúng các con số này, không được làm tròn khác đi.
+- KHÔNG có bạo lực thân thể, không chửi thề, không quả báo, không ai đi tù. Xung đột được giải quyết bằng lời nói và bằng việc nam chính đứng ra bênh.
+- titleCandidates: 3 tiêu đề kiểu kênh truyện audio ngôn tình.
+- BỐI CẢNH: <SET_NAMES>
+Chỉ JSON hợp lệ, không Markdown hay giải thích. Ý TƯỞNG:
+<IDEA>
+
+########## OUT ##########
+Bạn là biên kịch truyện ngôn tình. Tạo 6 chương tiếng Việt, tổng khoảng 14400 từ, chia 3 phần: <ACTS> Mỗi chương PHẢI có chapter là số nguyên, title là chuỗi không rỗng, purpose, conflict, emotionalState, reveal, climax, cliffhanger, estimatedWords là số nguyên, povCharacter, sweetBeat, doubtBeat, intimacyLevel là số nguyên, heroineAction, dramaticIrony, maleLeadInsert, swoonLine.
+- swoonLine: ĐÚNG MỘT câu thoại của nam chính trong chương này, dưới 25 chữ, đủ sức khiến người nghe tua lại nghe lần nữa. Không chương nào được trùng ý với chương khác. Đây là thứ người nghe nhớ và đi kể lại, phải viết cho đắt.
+- dramaticIrony: điều NGƯỜI NGHE biết trong chương này mà nữ chính CHƯA biết — thường là nam chính đã yêu cô từ lâu và đang âm thầm lo cho cô. Bắt buộc mỗi chương phải có và mỗi chương một điều khác nhau.
+- sweetBeat: lấy từ sweetLadder trong BIBLE. KHÔNG chương nào được trùng sweetBeat với chương khác.
+- doubtBeat: lấy từ doubtLadder trong BIBLE. Các chương cuối, sau khi hiểu lầm đã được gỡ, để chuỗi rỗng.
+- intimacyLevel: từ 1 đến 6, tăng nghiêm ngặt theo số chương, không được đứng yên hay tụt.
+- heroineAction: nữ chính CHỦ ĐỘNG làm gì trong chương này. Bắt buộc mỗi chương phải có; không được chỉ ngồi chờ được cưng chiều, chỉ đỏ mặt hay chỉ nghĩ ngợi.
+- maleLeadInsert: một đoạn chen ngắn (150-300 từ) cắt sang nam chính lúc nữ chính vắng mặt, để lộ anh âm thầm làm gì cho cô — dặn quản gia, giở tấm ảnh cũ ra xem, chặn một bài báo, từ chối một cuộc hẹn. Ghi rõ anh làm gì, ở đâu, lúc mấy giờ.
+- cliffhanger: phải là MỘT SỰ VIỆC VẬT LÝ vừa xảy ra hoặc MỘT CÂU THOẠI vừa buông ra, đặt ở câu cuối chương. Không được là câu hỏi tu từ của người kể, không được là trạng thái cảm xúc.
+- povCharacter: gần như mọi chương nhìn từ mắt nữ chính. TỐI ĐA 2 chương được nhìn từ mắt nam chính.
+- reveal: maleLeadSecret trong BIBLE phải được tiết lộ ở chương nằm khoảng 55-70% truyện. familyGate.confrontChapter và rival.showdownChapter đặt ở khoảng 75-90%. Các chương còn lại chỉ reveal nhỏ.
+Chỉ JSON {"chapters":[...]}. Không Markdown. BIBLE:
+<BIBLE>
+
+########## SC ##########
+Chia chương thành đúng 5 cảnh. Mỗi cảnh PHẢI có scene là số nguyên 1..5, title là tên cảnh, location, characters, purpose, conflict, emotionalChange, reveal, endingBeat, estimatedWords, povCharacter, pronounRegister, signatureProp, newIncident.
+- povCharacter: cảnh này nhìn từ mắt ai.
+- pronounRegister: cách xưng hô giữa nữ chính và nam chính trong cảnh, chọn theo nhiệt độ quan hệ: "tôi-anh" khi còn là hôn nhân hợp đồng và hai người còn giữ khoảng cách, "anh-em" khi đã ấm lên, "anh-em thân mật" khi đã yêu và không còn giữ ý. Phải khớp với conflict và emotionalChange của cảnh.
+- signatureProp: MỘT <SET_PROP>. Ưu tiên đạo cụ của đời sống đô thị và công sở, vì đây là truyện hiện đại. Không được là đồ chung chung.
+- newIncident: MỘT sự việc vật lý mới xảy ra ngay trong cảnh mà các cảnh trước chưa có. Không được ghi "hai người nhìn nhau", "cô đỏ mặt" hay bất kỳ trạng thái cảm xúc nào.
+- Nếu CHAPTER có maleLeadInsert, ĐÚNG MỘT cảnh phải gánh nó: cảnh đó lấy povCharacter là nam chính, đặt lúc nữ chính vắng mặt, estimatedWords chỉ 150-300, và newIncident chính là việc nam chính âm thầm làm.
+- Nếu CHAPTER có swoonLine, ĐÚNG MỘT cảnh phải chứa nó, đặt ở cao trào cảm xúc của cảnh đó.
+Không cảnh nào được trùng signatureProp hoặc newIncident với cảnh khác trong chương. scene CHỈ là số, tên cảnh chỉ nằm trong title. Chỉ JSON {"scenes":[...]}. Không Markdown. BIBLE:
+<BIBLE>
+CHAPTER:
+<CHAPTER>
+MEMORY:
+<MEMORY>
+
+########## WR ##########
+Viết cảnh truyện ngôn tình hoàn chỉnh bằng TIẾNG VIỆT để đọc voice-over, kể ở NGÔI THỨ NHẤT, nữ chính xưng "tôi". Show don't tell, thoại tự nhiên, subtext, nhịp tốt. Không đổi tuổi, quan hệ, bí mật; không tóm tắt; không tiếng Anh trừ tên riêng. Bám sát estimatedWords trong SCENE bên dưới (sai số ±20%); khi đạt độ dài đó, kết cảnh ngay, không viết lan man hay lặp lại.
+QUY TẮC BẮT BUỘC:
+1. XƯNG HÔ: dùng đúng pronounRegister của SCENE. Nếu quan hệ đổi nhiệt ngay trong cảnh thì đổi xưng hô ngay tại câu thoại đó (anh-em chuyển sang tôi-cô), vì đó là tín hiệu cho người nghe biết quan hệ vừa gãy.
+2. DIỄN, KHÔNG GIẢNG: sau một đoạn kịch tính, TUYỆT ĐỐI KHÔNG thêm câu người kể giải thích ý nghĩa hay tổng kết cảm xúc kiểu "điều đó khiến cô cảm thấy...", "cô nhận ra rằng...", "quả thực...". Để hành động và lời thoại tự nói. Ngoại lệ DUY NHẤT là câu thoại sát thương ở quy tắc 9.
+3. KHÔNG LẶP KẾT LUẬN CẢM XÚC: các ý đã dùng rồi được liệt kê trong USED bên dưới. Không được diễn đạt lại bất kỳ ý nào trong đó, kể cả bằng lời khác. Mỗi cảnh chỉ được nêu tối đa MỘT kết luận cảm xúc mới.
+4. SỰ VIỆC MỚI: cảnh phải chứa đúng newIncident của SCENE, xảy ra trực tiếp trên trang chứ không phải được kể lại.
+5. CHI TIẾT BỐI CẢNH CỤ THỂ: dùng signatureProp và các <SET_DETAIL> thay cho tính từ chung chung.
+6. KHÔNG TÓM TẮT THỜI GIAN: cấm viết "mấy tháng trôi qua", "kỳ nghỉ hè đến", "thời gian sau đó". Nếu phải nhảy thời gian thì mở cảnh bằng một hành động cụ thể đang diễn ra.
+7. VIẾT CHO NGƯỜI NGHE: tối đa 3 người có lời thoại trong cảnh; khi hai nhân vật cùng giới cùng xuất hiện thì gọi TÊN thay vì "anh ấy/cô ấy"; số viết bằng chữ; không chơi chữ dựa vào mặt chữ.
+8. NỘI TÂM TỰ TRÀO: mỗi cảnh phải có ÍT NHẤT MỘT câu nội tâm hài hước của "tôi", dạng phóng đại đời thường, tự cười mình — ví dụ "Xin lỗi, ai cho anh bắn thẳng tim tôi lúc sáng sớm vậy?", "Tôi cảm giác như não mình vừa được bơm trực tiếp tám mươi mi-li-lít đường nguyên chất". Đây là chất giọng của truyện, không được viết nghiêm trang từ đầu đến cuối. Nhưng TỐI ĐA BA câu như vậy trong một cảnh, nhiều hơn sẽ làm loãng cảnh tình cảm.
+9. CÂU THOẠI SÁT THƯƠNG: nếu SCENE được giao gánh swoonLine của chương, đặt đúng câu đó vào cao trào cảm xúc của cảnh. Câu ấy đứng một mình, ngắn, do nam chính nói. TUYỆT ĐỐI KHÔNG viết câu người kể giải thích ý nghĩa của nó ngay sau đó — chỉ được tả phản ứng cơ thể của "tôi".
+10. CON SỐ CỤ THỂ: mọi khoản tiền, tuổi tác, giờ giấc, khoảng cách phải là con số cụ thể lấy đúng từ ledger trong BIBLE và timeline trong MEMORY, không được viết "một số tiền lớn", "nhiều năm trước", "khuya lắm rồi". Nếu cảnh phát sinh con số mới thì chọn số lẻ, đời thường (bảy mươi mốt triệu, hai giờ mười lăm) chứ không phải số tròn trịa.
+11. CÂU NGẮN CHO GIỌNG ĐỌC: phần lớn câu dưới 20 chữ. Khi kịch tính lên đỉnh, viết chuỗi câu rất ngắn cùng chủ ngữ ("Bà ngồi xuống. Bà mở tủ. Bà kéo cái hũ ra."). Không viết câu ghép nhiều mệnh đề lồng nhau; người nghe không tua lại được.
+12. NHỊP KẾT CẢNH: nếu cảnh vừa xong một khoảnh khắc tim đập, kết bằng MỘT câu tả phản ứng cơ thể của "tôi" (tim đập lệch một nhịp, đỏ mặt đến tận tai, đứng đơ ba giây, quên mất mình đang cầm gì) rồi dừng, không bình luận thêm.
+13. NGÔI KỂ: giữ ngôi thứ nhất "tôi" xuyên suốt. NGOẠI LỆ DUY NHẤT là cảnh gánh maleLeadInsert — cảnh đó viết ở ngôi thứ ba theo nam chính. Không được trượt ngôi giữa chừng ở các cảnh khác.
+14. ĐIỆP CẤU TRÚC: được phép dùng TỐI ĐA MỘT lần trong mỗi chương một chuỗi ba câu cùng khuôn để dồn cảm xúc, dạng "Là người luôn đứng sau lưng chị ấy trong mọi bức ảnh gia đình. Là người bị lãng quên trong các bữa tiệc. Là người nên biết ơn khi được lựa chọn." Dùng nhiều hơn sẽ thành sáo.
+15. KHÔNG BẠO LỰC: cấm đánh đập, cấm chửi thề, cấm doạ giết. Mâu thuẫn cao nhất cũng chỉ đến mức lời nói lạnh và bỏ đi.
+OUTPUT là văn bản truyện thuần túy. Câu đầu tiên bắt đầu trực tiếp bằng nội dung. TUYỆT ĐỐI KHÔNG viết "Dưới đây là", "Đây là phiên bản", "Sau đây là", "Tôi đã chỉnh sửa". Không Markdown: không #, **, *, _, bullet, code block, blockquote, stage directions, "Narrator:", "Dialogue:", "Scene:", "Chapter:". BIBLE:
+<BIBLE>
+CHAPTER:
+<CHAPTER>
+MEMORY:
+<MEMORY>
+SCENE:
+<SCENE>
+USED:
+<USED>
+RECENT:
+<RECENT>
+
+########## HOOK ##########
+Viết LỜI MỞ cho truyện audio ngôn tình tiếng Việt, khoảng 14400 từ và TUYỆT ĐỐI không quá 14400 cộng thêm 15%, để đọc voice-over. Đây KHÔNG phải lời dẫn của người dẫn chương trình mà là chính giọng nữ chính xưng "tôi" bắt đầu kể. Đi đúng 3 bước, liền mạch thành một đoạn:
+1. Chép đúng câu openingConfession.line trong BIBLE, hoặc viết lại sát nghĩa nếu câu đó chưa mượt.
+2. Một đến hai câu dựng tình thế trớ trêu: chuyện gì đã đẩy nữ chính vào chỗ đó, ai vắng mặt, cái gì được để lại.
+3. Một câu hứa cảm xúc lấy từ openingConfession.promise, dẫn thẳng vào chương 1.
+TUYỆT ĐỐI KHÔNG dùng tục ngữ, KHÔNG gọi người nghe là "quý vị", KHÔNG chèn câu mời nghe của người dẫn chương trình vào cuối đoạn, KHÔNG hé lộ maleLeadSecret hay cái kết. OUTPUT là văn bản thuần, không Markdown, không tiêu đề, không "Dưới đây là". BIBLE:
+<BIBLE>
+OUTLINE:
+<OUTLINE>
+
+########## OUTRO ##########
+Viết LỜI KẾT NGẮN cho truyện audio ngôn tình tiếng Việt, khoảng 14400 từ, để đọc voice-over. Đây là lời của kênh nói với người nghe sau khi truyện đã hết, KHÔNG phải một bài bình luận. Đi đúng 3 bước:
+1. Một câu chốt lại hình ảnh cuối cùng của truyện.
+2. Một câu hỏi nhẹ nhàng cho người nghe về khoảnh khắc họ thích nhất trong truyện.
+3. Kêu gọi để lại bình luận, nhấn thích và đăng ký kênh, cảm ơn và chào tạm biệt.
+KHÔNG phân tích nhân vật, KHÔNG nhắc lại bài học đạo lý, KHÔNG kể lại diễn biến, KHÔNG thêm tình tiết mới, KHÔNG đặt tên kênh cụ thể. OUTPUT là văn bản thuần, không Markdown, không "Dưới đây là". BIBLE:
+<BIBLE>
+MEMORY:
+<MEMORY>
+ĐOẠN KẾT TRUYỆN:
+<ENDING>
+
+########## MEM ##########
+Cập nhật continuity. Chỉ JSON {"characterState":{},"knownFacts":[{"text":"","important":false}],"revealedSecrets":[],"unresolvedQuestions":[{"text":"","important":false}],"foreshadowing":[{"text":"","important":false}],"lastChapterSummary":"","usedEmotionalBeats":[],"usedSweetBeats":[],"usedDoubtBeats":[],"usedSwoonLines":[],"motifOccurrences":[],"timeline":{}}. important=true nếu chi tiết ảnh hưởng danh tính/bí mật/cốt truyện về sau hoặc là mạch chưa giải quyết; false nếu chỉ là chi tiết bối cảnh/miêu tả thông thường. Bỏ khỏi unresolvedQuestions/foreshadowing những mục đã được giải quyết/trả lời trong SCENE, không giữ lại.
+- usedEmotionalBeats: các kết luận cảm xúc đã nêu trong truyện, mỗi mục 3-6 từ (ví dụ "cô thấy bế tắc", "sống như trong tù"). Gộp mọi cách nói khác nhau của cùng một ý thành MỘT mục duy nhất. Đây là danh sách cấm lặp cho các cảnh sau, phải giữ lại toàn bộ mục cũ.
+- usedSweetBeats: các nấc thân mật đã dùng (đoán trước nhu cầu, bênh vực nơi đông người, quà mang ký ức riêng, tự tay nấu ăn, ghen, tuyên bố trước gia tộc).
+- usedDoubtBeats: các nguồn đã gieo nghi ngờ "mình chỉ là người thay thế" (lời chị gái, tin đồn công ty, tấm ảnh cũ, mẹ chồng, bài báo).
+- usedSwoonLines: chép nguyên văn từng câu thoại sát thương của nam chính đã dùng, để các chương sau không nói lại ý cũ.
+- motifOccurrences: mỗi lần motif xuất hiện ghi một mục "lần thứ mấy - mang nghĩa gì".
+- timeline: mọi con số về tuổi và mốc thời gian đã nêu trong truyện, dạng {"tuổi nhân vật":"","đã cưới bao lâu":"","mốc đã trôi qua":""}, để các cảnh sau không mâu thuẫn.
+Không bịa, không Markdown. OLD:
+<MEMORY>
+SCENE:
+<SCENE>
+
+########## EDIT ##########
+Biên tập chương truyện ngôn tình tiếng Việt cho voice-over. Giữ nguyên plot/reveal/tên/tuổi/quan hệ. Không thêm plot.
+VIỆC PHẢI LÀM:
+1. XÓA LẶP Ý: nếu một kết luận cảm xúc được nói lại nhiều lần dù bằng lời khác, chỉ giữ lần mạnh nhất, xóa hẳn các lần còn lại.
+2. CẮT GIẢNG GIẢI: xóa các câu người kể giải thích ý nghĩa hoặc tổng kết cảm xúc ngay sau một đoạn đã dựng đủ rõ. GIỮ NGUYÊN VẸN câu thoại sát thương của chương và KHÔNG thêm câu người kể giải thích ý nghĩa ngay sau nó — sau câu ấy chỉ được giữ phần tả phản ứng cơ thể.
+3. NGÔI KỂ: kiểm tra ngôi kể không trượt từ "tôi" sang ngôi thứ ba giữa chừng, trừ đoạn chen theo nam chính.
+4. NỘI TÂM TỰ TRÀO: giữ lại ít nhất một câu nội tâm tự trào trong mỗi cảnh; nếu một cảnh có quá ba câu như vậy thì cắt bớt, giữ câu duyên nhất.
+5. XƯNG HÔ: kiểm tra xưng hô nhất quán trong từng cảnh và khớp nhiệt độ quan hệ, chỉ đổi khi quan hệ thực sự đổi.
+6. TIMELINE: sửa mọi con số tuổi hoặc mốc thời gian mâu thuẫn với timeline trong MEMORY, lấy MEMORY làm chuẩn.
+7. Cắt câu thừa nhưng KHÔNG cắt tình tiết và KHÔNG rút ngắn quá 15% độ dài bản nháp.
+Output bắt đầu trực tiếp bằng câu chuyện. Không meta, không Markdown, không "Dưới đây là", "Đây là phiên bản", "Tôi đã chỉnh sửa". BIBLE:
+<BIBLE>
+MEMORY:
+<MEMORY>
+OUTLINE:
+<CHAPTER>
+DRAFT:
+<DRAFT>
+
+########## CHECK ##########
+Rà soát continuity của truyện ngôn tình tiếng Việt dưới đây. Chỉ JSON {"issues":[{"type":"","severity":"cao|vừa|thấp","detail":"","suggestion":""}],"unresolvedThreads":[],"verdict":""}. type chọn trong: timeline, dây thừa, lặp ý, nhân vật phẳng, thang ngọt trùng lặp, swoonLine trùng, nghi ngờ không giải, mở đầu không trả bài, mâu thuẫn, số liệu lệch, trượt ngôi kể. Tìm: con số tuổi hoặc mốc thời gian mâu thuẫn nhau; tình tiết gài ra rồi bỏ quên; kết luận cảm xúc lặp quá 2 lần; nhân vật chỉ xuất hiện làm nền; hai chương dùng cùng một nấc trong sweetLadder; hai câu thoại sát thương trùng ý nhau; một nấc trong doubtLadder được gài ra mà không bao giờ được gỡ; lời hứa trong openingConfession không hề được thực hiện trong truyện; con số nêu lại khác với ledger trong BIBLE; đoạn nào tuột khỏi ngôi thứ nhất mà không phải đoạn chen theo nam chính. Không bịa lỗi, nếu sạch thì trả mảng rỗng. Không Markdown. BIBLE:
+<BIBLE>
+TRUYỆN:
+<STORY>
+
+########## REVIEW_CH ##########
+Chấm điểm biên tập MỘT CHƯƠNG truyện ngôn tình tiếng Việt dạng audio kể chuyện. Chỉ JSON, không Markdown:
+{"chapter":0,"scores":{"hook":0,"nhipDo":0,"showKhongTell":0,"hoiThoai":0,"ngotNgao":0,"namChinh":0},"issues":[{"severity":"cao|vừa|thấp","detail":"","suggestion":""}],"strengths":[""]}
+"scores" chỉ được chứa đúng 6 khóa nêu trên, không thêm khóa nào khác.
+THANG ĐIỂM 0-10: 0-4 hỏng, phải viết lại; 5-6 tạm đọc được nhưng nhạt; 7 đạt chuẩn nghe được; 8 tốt; 9-10 chỉ dành cho đoạn thật sự xuất sắc, rất hiếm khi cho. Chấm thẳng tay, đừng nới điểm. Nếu có issue severity "cao" thì tiêu chí liên quan không được quá 6.
+TỪNG TIÊU CHÍ:
+- hook: ba câu đầu có giữ được người nghe không; câu cuối chương có phải một sự kiện vật lý hoặc một câu thoại đúng như cliffhanger trong OUTLINE, chứ không phải câu hỏi tu từ.
+- nhipDo: có đoạn nào lê thê, kể lại điều người nghe đã biết; hoặc ngược lại dồn quá nhanh làm mất sức nặng của khoảnh khắc tình cảm.
+- showKhongTell: rung động dựng bằng hành động, đồ vật, phản ứng cơ thể hay bị người kể nói toạc ra và giảng giải.
+- hoiThoai: thoại có tự nhiên như người Việt nói không; pronounRegister có khớp nhiệt độ quan hệ không; có nhân vật nào nói năng như đang đọc văn viết không.
+- ngotNgao: sweetBeat của OUTLINE có thật sự XẢY RA TRÊN TRANG không hay chỉ được nhắc tới; swoonLine có được đặt vào đúng cao trào và có đắt không hay sáo rỗng, đọc lên thấy sến; intimacyLevel có cao hơn chương trước thật không.
+- namChinh: nam chính có nhất quán với maleLeadSecret trong BIBLE không — anh biết trước, anh đã chờ, nên mọi hành động phải có gốc; hay anh bị viết thành robot ngôn tình chỉ biết buông lời ngọt mà không có lý do riêng.
+ĐỐI CHIẾU OUTLINE: nếu chương thiếu dramaticIrony, thiếu maleLeadInsert là đoạn cắt sang nam chính lúc nữ chính vắng mặt, thiếu swoonLine, hoặc heroineAction không hề xảy ra, thì ghi thành issue.
+issues: chỉ nêu lỗi có thật, detail phải trích một đoạn ngắn trong chương làm bằng chứng, suggestion phải là việc sửa cụ thể chứ không phải lời khuyên chung chung. Không bịa lỗi, chương sạch thì trả mảng rỗng. Tối đa 6 issue. strengths tối đa 3 mục, mỗi mục một câu.
+BIBLE:
+<BIBLE>
+OUTLINE CHƯƠNG NÀY:
+<CHAPTER>
+NỘI DUNG CHƯƠNG:
+<TEXT>
+
+########## REVIEW_SUM ##########
+Tổng hợp đánh giá toàn bộ truyện ngôn tình tiếng Việt dựa trên bảng điểm từng chương. Truyện có tổng cộng 6 chương và ĐÃ VIẾT XONG. Nếu bảng điểm dưới đây thiếu một vài chương thì đó là do lỗi kỹ thuật lúc chấm, không phải truyện viết thiếu: cứ đánh giá trên các chương có sẵn, không hạ điểm và không kết luận truyện dang dở vì lý do đó. Chỉ JSON, không Markdown:
+{"scores":{"cauTruc":0,"vongCungNhanVat":0,"caoTrao":0,"ketThuc":0,"doMoiLa":0,"bamMoralMotif":0},"overall":0,"topIssues":[{"severity":"cao|vừa|thấp","chapters":[0],"detail":"","suggestion":""}],"verdict":""}
+"scores" chỉ được chứa đúng 6 khóa nêu trên, không thêm khóa nào khác.
+THANG ĐIỂM 0-10 như chấm chương: 7 là đạt chuẩn nghe được, 9-10 rất hiếm khi cho.
+- cauTruc: ba hồi có cân không, có chương nào không đẩy quan hệ đi đâu cả không.
+- vongCungNhanVat: nữ chính cuối truyện có khác đầu truyện không — heroineWound trong BIBLE có được chữa lành hay chỉ được nhắc tới; thay đổi đó có được dựng dần hay đến đột ngột.
+- caoTrao: cuộc đối đầu với rival và cửa ải familyGate có xứng với nỗi nghi ngờ đã tích suốt truyện không, hay được giải quyết quá dễ, hay nhờ trùng hợp may mắn.
+- ketThuc: happyEnding có được dựng dần không hay đến đột ngột; có gọi lại openingConfession không; mọi nấc doubtLadder đã được gỡ hết chưa.
+- doMoiLa: điểm và lỗi của các chương có cho thấy lặp nấc sweetLadder hay các câu thoại sát thương na ná nhau không.
+- bamMoralMotif: truyện có phục vụ moral và motif trong BIBLE hay chúng bị bỏ quên từ giữa truyện.
+overall: điểm tổng cho cả truyện, KHÔNG phải trung bình cộng máy móc; hạ điểm mạnh nếu một lỗi nghiêm trọng kéo dài qua nhiều chương.
+topIssues: tối đa 5 mục, gộp lỗi lặp ở nhiều chương thành MỘT mục và liệt kê số chương vào "chapters", ưu tiên lỗi ảnh hưởng cả truyện hơn lỗi cục bộ.
+verdict: 3-5 câu, nói thẳng truyện này đã nghe được chưa và việc quan trọng nhất cần sửa là gì.
+BIBLE:
+<BIBLE>
+ĐIỂM TỪNG CHƯƠNG:
+6
+
+########## FIXCH ##########
+Sửa lại MỘT CHƯƠNG truyện ngôn tình tiếng Việt cho voice-over, dựa trên danh sách lỗi biên tập viên đã chỉ ra.
+NGUYÊN TẮC BẤT DI BẤT DỊCH: giữ nguyên toàn bộ tình tiết, tên, tuổi, quan hệ, mốc thời gian, con số và diễn biến. Không thêm tình tiết mới, không xoá tình tiết cũ, không đổi kết cục của chương. Chỉ sửa CÁCH KỂ.
+VIỆC PHẢI LÀM: đọc từng mục trong ISSUES và sửa đúng chỗ đó theo suggestion. Mỗi issue phải được xử lý, không bỏ sót mục nào. Ngoài các lỗi đã nêu thì đừng viết lại những đoạn đang ổn.
+BẮT BUỘC THÊM:
+- Câu cuối chương phải là sự kiện vật lý hoặc câu thoại đúng như cliffhanger trong OUTLINE, và KHÔNG được có bất kỳ câu tả cảnh nào sau nó.
+- Giữ nguyên vẹn câu thoại sát thương của chương, KHÔNG thêm câu người kể giải thích ý nghĩa ngay sau nó.
+- Kiểm tra ngôi kể không trượt từ "tôi" sang ngôi thứ ba giữa chừng, trừ đoạn chen theo nam chính.
+- Giữ lại ít nhất một câu nội tâm tự trào trong mỗi cảnh; nếu một cảnh có quá ba câu như vậy thì cắt bớt, giữ câu duyên nhất.
+- Xưng hô phải đúng quan hệ trong BIBLE và giữ nhất quán suốt chương.
+- Mọi câu tiếng Việt phải tự nhiên, đúng nghĩa, đúng chính tả; <SET_FOREIGN>.
+- Độ dài bản sửa không được ngắn hơn 85% bản gốc.
+Output bắt đầu trực tiếp bằng câu chuyện. Không meta, không Markdown, không "Dưới đây là", không liệt kê những gì đã sửa. BIBLE:
+<BIBLE>
+MEMORY:
+<MEMORY>
+OUTLINE CHƯƠNG NÀY:
+<CHAPTER>
+ISSUES CẦN SỬA:
+<ISSUES>
+CHƯƠNG HIỆN TẠI:
+<TEXT>
+
+########## FIXVERIFY ##########
+Kiểm tra bản sửa của MỘT CHƯƠNG truyện drama tiếng Việt đã xử lý được những lỗi biên tập viên nêu ra hay chưa. Chỉ JSON, không Markdown:
+{"results":[{"index":0,"fixed":true,"evidence":""}],"newProblems":[""]}
+Mỗi mục trong ISSUES có index đúng bằng thứ tự của nó trong mảng, phải trả lời đủ mọi mục, không bỏ sót.
+fixed=true chỉ khi lỗi đã hết hẳn trong bản mới; còn sót, sửa nửa vời, hoặc chuyển lỗi sang chỗ khác thì fixed=false. evidence phải trích một đoạn ngắn trong CHƯƠNG SAU KHI SỬA làm bằng chứng, không nói chung chung, không nhắc lại lời của issue.
+newProblems: tối đa 3 lỗi NGHIÊM TRỌNG mới phát sinh do chính lần sửa này (mâu thuẫn tình tiết, sai tên hoặc tuổi, mất tình tiết cũ, câu văn hỏng nghĩa, xưng hô loạn). Không có thì trả mảng rỗng. Không bịa lỗi.
+OUTLINE CHƯƠNG NÀY:
+<CHAPTER>
+ISSUES ĐÃ YÊU CẦU SỬA:
+<ISSUES>
+CHƯƠNG SAU KHI SỬA:
+<TEXT>

@@ -1,0 +1,8 @@
+id=ngontinh
+label=Ngôn tình sủng — hôn nhân thay thế
+hookWords=70
+outroWords=150
+bibleRequired=title,genre,theme,premise,tone,characters,setting,mainConflict,secondaryConflicts,moral,motif,heroineWound,maleLeadSecret,sweetLadder,doubtLadder,happyEnding
+chapterCriteria=hook,nhipDo,showKhongTell,hoiThoai,ngotNgao,namChinh
+usedMemoryKeys=usedEmotionalBeats,usedSweetBeats,usedDoubtBeats,usedSwoonLines
+actsText(6)=Chương 1-2: MỞ ĐẦU, dựng tình thế hôn nhân thay thế, cú rung động đầu tiên và nỗi sợ "mình chỉ là người thay thế". Chương 3-4: NỘI DUNG CHÍNH, thang ngọt và thang nghi ngờ đi song song, mỗi chương nhích thân mật lên một nấc rồi bồi thêm một cớ để nghi ngờ. Chương 5-6: CAO TRÀO, tiết lộ nam chính đã chọn nữ chính từ trước, gỡ hết hiểu lầm, đối đầu với rival và gia tộc, kết thúc có hậu và trọn vẹn, không để mở.
