@@ -145,6 +145,14 @@ async function readJSONIfExists(file: string): Promise<any> {
 // Chương nào đã viết lại sau lần chấm điểm gần nhất áp dụng cho nó. Mốc so là
 // review-report.generatedAt, trừ chương được stage FIX sửa và giữ lại - chương đó đã
 // được chấm lại ngay trong stage FIX nên mốc của nó là fix-report.generatedAt.
+// Biên 2000ms: output/ có thể nằm trên exFAT, nơi mtime chỉ có độ phân giải 2 giây và
+// làm tròn LÊN - một chương ghi lúc 12:25:19.2 đọc ra thành 12:25:20.000, tức "mới hơn"
+// chính bản báo cáo ghi ngay sau nó, nên chương cuối cùng của mọi lượt sửa đều bị gắn
+// nhãn "cũ" oan và người dùng bị mời chấm điểm lại tốn tiền. Không có quy trình hợp lệ
+// nào viết lại một chương trong vòng 2 giây kể từ báo cáo của chính nó: một lượt LLM
+// viết lại chương mất hàng phút.
+const MTIME_TOLERANCE_MS = 2000;
+
 async function staleReviewChapters(dir: string, review: any, fixReport: any): Promise<number[]> {
   if (!review?.generatedAt) return [];
   const reviewedAt = Date.parse(review.generatedAt);
@@ -161,7 +169,7 @@ async function staleReviewChapters(dir: string, review: any, fixReport: any): Pr
     const scoredAt = keptFixes.has(entry.chapter) && Number.isFinite(fixedAt)
       ? Math.max(reviewedAt, fixedAt)
       : reviewedAt;
-    if (stat.mtimeMs > scoredAt) stale.push(entry.chapter);
+    if (stat.mtimeMs > scoredAt + MTIME_TOLERANCE_MS) stale.push(entry.chapter);
   }
   return stale;
 }
@@ -172,16 +180,20 @@ app.get("/api/ideas", async (req, res) => {
   res.json({ files });
 });
 
-app.get("/api/config", (req, res) => {
+// Màn hình tạo truyện lấy giá trị mặc định từ đây, nên phải phủ settings.json lên
+// config giống hệt đường tạo truyện - nếu không, thể loại/bối cảnh đặt trong
+// settings.json sẽ không bao giờ hiện ra ở form và người dùng phải chọn lại mỗi lần.
+app.get("/api/config", async (req, res) => {
+  const c = { ...config, ...(await loadSettingsOverrides()) };
   res.json({
-    chapters: config.chapters,
-    scenesPerChapter: config.scenesPerChapter,
-    durationMinutes: config.durationMinutes,
-    targetWordsPerMinute: config.targetWordsPerMinute,
-    silenceGapMs: config.tts.silenceGapMs,
-    genre: config.genre,
+    chapters: c.chapters,
+    scenesPerChapter: c.scenesPerChapter,
+    durationMinutes: c.durationMinutes,
+    targetWordsPerMinute: c.targetWordsPerMinute,
+    silenceGapMs: c.tts.silenceGapMs,
+    genre: c.genre,
     genres: GENRES,
-    setting: config.setting,
+    setting: c.setting,
     settings: SETTINGS_LIST
   });
 });
@@ -226,7 +238,12 @@ app.post("/api/settings", async (req, res) => {
       : current.autoReview ?? config.autoReview,
     editorModel: typeof req.body?.editorModel === "string"
       ? String(req.body.editorModel).trim()
-      : current.editorModel ?? config.editorModel
+      : current.editorModel ?? config.editorModel,
+    // Màn hình Cài đặt không có ô thể loại/bối cảnh, nhưng settings.json được phép
+    // chứa chúng làm mặc định cho form tạo truyện. Ghi đè bằng danh sách khóa cố định
+    // sẽ xóa mất chúng mỗi lần bấm Lưu, nên phải chép lại giá trị đang có.
+    ...(current.genre ? { genre: current.genre } : {}),
+    ...(current.setting ? { setting: current.setting } : {})
   };
 
   await fs.writeFile("settings.json.tmp", JSON.stringify(settings, null, 2), "utf8");
