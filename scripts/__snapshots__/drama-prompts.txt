@@ -49,7 +49,7 @@ QUY TẮC BẮT BUỘC:
 2. DIỄN, KHÔNG GIẢNG: sau một đoạn kịch tính, TUYỆT ĐỐI KHÔNG thêm câu người kể giải thích ý nghĩa hay tổng kết cảm xúc kiểu "điều đó khiến cô cảm thấy...", "cô nhận ra rằng...", "quả thực...". Để hành động và lời thoại tự nói. Ngoại lệ DUY NHẤT là câu báo trước ở quy tắc 9.
 3. KHÔNG LẶP KẾT LUẬN CẢM XÚC: các ý đã dùng rồi được liệt kê trong USED bên dưới. Không được diễn đạt lại bất kỳ ý nào trong đó, kể cả bằng lời khác. Mỗi cảnh chỉ được nêu tối đa MỘT kết luận cảm xúc mới.
 4. SỰ VIỆC MỚI: cảnh phải chứa đúng newIncident của SCENE, xảy ra trực tiếp trên trang chứ không phải được kể lại.
-5. CHI TIẾT VIỆT CỤ THỂ: dùng signatureProp và các <SET_DETAIL> thay cho tính từ chung chung.
+5. CHI TIẾT BỐI CẢNH CỤ THỂ: dùng signatureProp và các <SET_DETAIL> thay cho tính từ chung chung.
 6. KHÔNG TÓM TẮT THỜI GIAN: cấm viết "mấy tháng trôi qua", "kỳ nghỉ hè đến", "thời gian sau đó". Nếu phải nhảy thời gian thì mở cảnh bằng một hành động cụ thể đang diễn ra.
 7. VIẾT CHO NGƯỜI NGHE: tối đa 3 người có lời thoại trong cảnh; khi hai nhân vật cùng giới cùng xuất hiện thì gọi TÊN thay vì "anh ấy/cô ấy"; số viết bằng chữ; không chơi chữ dựa vào mặt chữ.
 8. DƯ LUẬN: nếu cảnh có đám đông chứng kiến, cho ít nhất hai cách nhìn trái ngược của người ngoài, không để người kể phán xét thay.
