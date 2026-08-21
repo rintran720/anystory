@@ -6,8 +6,9 @@ import { exists } from "./utils.js";
 import { generateStory, reviewStory, fixStory, needsFix } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
+import { GENRES, SETTINGS_LIST } from "./prompts/index.js";
 import type { ProgressEvent, TtsProgressEvent, RunUntil, JobStatus, JobSummary } from "./types.js";
-import type { Config } from "./types.js";
+import type { Config, GenreId, SettingId } from "./types.js";
 
 const app = express();
 app.use(express.json());
@@ -177,7 +178,11 @@ app.get("/api/config", (req, res) => {
     scenesPerChapter: config.scenesPerChapter,
     durationMinutes: config.durationMinutes,
     targetWordsPerMinute: config.targetWordsPerMinute,
-    silenceGapMs: config.tts.silenceGapMs
+    silenceGapMs: config.tts.silenceGapMs,
+    genre: config.genre,
+    genres: GENRES,
+    setting: config.setting,
+    settings: SETTINGS_LIST
   });
 });
 
@@ -241,6 +246,7 @@ app.get("/api/stories", async (req, res) => {
   const stories = await Promise.all(
     entries.filter(e => e.isDirectory()).map(async e => {
       const dir = path.join(root, e.name);
+      const bible = await readJSONIfExists(path.join(dir, "story_bible.json"));
       const outline = await readJSONIfExists(path.join(dir, "outline.json"));
       const totalChapters = outline?.chapters?.length ?? 0;
       const dirFiles = await fs.readdir(dir).catch(() => []);
@@ -266,7 +272,9 @@ app.get("/api/stories", async (req, res) => {
         reviewScore: review?.summary?.overall ?? null,
         staleChapters: staleCount,
         isRunning: jobStatus === "running",
-        isQueued: jobStatus === "queued"
+        isQueued: jobStatus === "queued",
+        genre: bible?.genreId ?? null,
+        setting: bible?.settingId ?? null
       };
     })
   );
@@ -331,6 +339,13 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
     return { ok: false, name, status: 400, error: "idea or ideaFile is required for a new story" };
   }
 
+  if (input.genre != null && input.genre !== "" && !GENRES.some(g => g.id === input.genre)) {
+    return { ok: false, name, status: 400, error: `unknown genre: ${input.genre}` };
+  }
+  if (input.setting != null && input.setting !== "" && !SETTINGS_LIST.some(s => s.id === input.setting)) {
+    return { ok: false, name, status: 400, error: `unknown setting: ${input.setting}` };
+  }
+
   const settingsOverrides = await loadSettingsOverrides();
   const baseConfig = { ...config, ...settingsOverrides };
   maxParallelStories = baseConfig.maxParallelStories;
@@ -338,7 +353,9 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
     ...baseConfig,
     chapters: input.chapters ? Number(input.chapters) : baseConfig.chapters,
     scenesPerChapter: input.scenesPerChapter ? Number(input.scenesPerChapter) : baseConfig.scenesPerChapter,
-    durationMinutes: input.durationMinutes ? Number(input.durationMinutes) : baseConfig.durationMinutes
+    durationMinutes: input.durationMinutes ? Number(input.durationMinutes) : baseConfig.durationMinutes,
+    genre: (input.genre || baseConfig.genre) as GenreId,
+    setting: (input.setting || baseConfig.setting) as SettingId | "auto"
   };
 
   let runUntilArg: RunUntil | undefined;
@@ -494,7 +511,9 @@ app.post("/api/generate", async (req, res) => {
     scenesPerChapter: body.scenesPerChapter,
     durationMinutes: body.durationMinutes,
     runUntil: body.runUntil,
-    chapterLimit: body.chapterLimit
+    chapterLimit: body.chapterLimit,
+    genre: body.genre,
+    setting: body.setting
   };
 
   const queued: string[] = [];
