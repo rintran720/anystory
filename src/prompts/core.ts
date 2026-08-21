@@ -38,4 +38,4 @@ const HOOKFIX_EASY=`NÓI CHO DỄ HIỂU MÀ VẪN MƯỢT — ĐÂY LÀ VIỆC 
 - Xoá chữ hoa mỹ không thêm thông tin gì: "định mệnh", "trớ trêu thay", "ngậm ngùi", "xót xa thay", "dòng đời xô đẩy".
 - Người nghe không tua lại được: phải hiểu ngay lần đầu, nhưng nghe ra là một người đang kể chuyện, không phải một bản tin.`;
 const HOOKFIX_TAIL=`Độ dài: khoảng {{WORDS}} từ và TUYỆT ĐỐI không quá {{WORDS}} cộng thêm 15%. Bản cũ dài hơn mức đó thì phải cắt xuống cho vừa — cắt chữ thừa và câu rườm, KHÔNG cắt tình tiết. Chỗ nào bản cũ đã hay thì để yên, đừng viết khác đi cho có. OUTPUT là lời dẫn hoàn chỉnh đã sửa, văn bản thuần, không Markdown, không tiêu đề, không "Dưới đây là", không giải thích đã sửa gì.`;
-export const buildHOOKFIX=(o:{intro:string;keep:string[];refs:string}):string=>`${o.intro}\n${HOOKFIX_FROZEN}\n${HOOKFIX_EASY}\nGIỮ ĐÚNG CÔNG THỨC CỦA THỂ LOẠI:\n${o.keep.map(k=>`- ${k}`).join("\n")}\n${HOOKFIX_TAIL} ${o.refs}`;
+export const buildHOOKFIX=(o:{intro:string;keep:string[];refs:string}):string=>`${o.intro}\n${HOOKFIX_FROZEN}\n${HOOKFIX_EASY}\nGIỮ ĐÚNG CÔNG THỨC CỦA THỂ LOẠI:\n${o.keep.map(k=>`- ${k}`).join("\n")}\n${HOOKFIX_TAIL} ${o.refs}{{FEEDBACK}}`;

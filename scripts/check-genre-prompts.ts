@@ -150,7 +150,7 @@ must(!n.HOOK.includes("{{SET_PROVERB}}"), "ngontinh HOOK now carries {{SET_PROVE
 // ─────────────────────────────────────────────────────────────────────────────
 // HOOKFIX viết lại lời dẫn cho dễ nghe. Nó chạy NGOÀI pipeline sinh truyện, từ một nút
 // bấm, nên không có stage nào phía sau đỡ lỗi giúp: prompt sai là ghi đè thẳng hook.txt.
-const HOOKFIX_VARS = new Set(["{{HOOK}}", "{{BIBLE}}", "{{WORDS}}"]);
+const HOOKFIX_VARS = new Set(["{{HOOK}}", "{{BIBLE}}", "{{WORDS}}", "{{FEEDBACK}}"]);
 for (const g of [d, n]) {
   for (const v of HOOKFIX_VARS)
     must(g.HOOKFIX.includes(v), `${g.id} HOOKFIX no longer carries ${v} — rewriteHook fills it, so the prompt would lose it silently`);

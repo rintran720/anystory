@@ -631,10 +631,26 @@ async function runHookAction(method, label, busyText) {
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     box.value = data.hook;
     state.hookLoaded = data.hook;
+    // Vòng lặp có quyền loại cả ba lượt viết lại rồi giữ nguyên bản cũ. Đó là kết quả hợp
+    // lệ chứ không phải lỗi - nhưng phải nói thẳng ra, vì màn hình không đổi một chữ nào
+    // thì người dùng chỉ có thể kết luận là nút hỏng.
+    if (data.kept === false) {
+      const last = (data.attempts ?? []).slice(-1)[0];
+      msg.className = "warn";
+      msg.textContent = `Giữ nguyên lời dẫn cũ: ${data.calls} lượt viết lại đều bị đo ra là tệ hơn`
+        + (last && last.regressions && last.regressions.length ? ` — ${last.regressions.join("; ")}.` : ".");
+      return;
+    }
     msg.className = "success";
-    msg.textContent = data.chaptersFound < data.total
-      ? `${label} Truyện mới có ${data.chaptersFound}/${data.total} chương nên chưa dựng lại file truyện hoàn chỉnh.`
-      : `${label} Đã dựng lại file truyện hoàn chỉnh. Bản trước nằm ở pre-fix/hook.txt.`;
+    msg.textContent = [
+      label,
+      data.calls > 1 ? `Phải ${data.calls} lượt mới đạt.` : "",
+      (data.gains ?? []).length ? `Đo được: ${data.gains.join("; ")}.` : "",
+      data.after ? `Nhịp câu ${data.before.avgSentence} → ${data.after.avgSentence} chữ/câu.` : "",
+      data.chaptersFound !== null && data.chaptersFound < data.total
+        ? `Truyện mới có ${data.chaptersFound}/${data.total} chương nên chưa dựng lại file truyện hoàn chỉnh.`
+        : "Đã dựng lại file truyện hoàn chỉnh. Bản trước nằm ở pre-fix/hook.txt."
+    ].filter(Boolean).join(" ");
   } catch (err) {
     msg.className = "error";
     msg.textContent = String(err.message || err);

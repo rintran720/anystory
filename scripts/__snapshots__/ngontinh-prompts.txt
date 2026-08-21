@@ -109,7 +109,7 @@ GIỮ ĐÚNG CÔNG THỨC CỦA THỂ LOẠI:
 Độ dài: khoảng 14400 từ và TUYỆT ĐỐI không quá 14400 cộng thêm 15%. Bản cũ dài hơn mức đó thì phải cắt xuống cho vừa — cắt chữ thừa và câu rườm, KHÔNG cắt tình tiết. Chỗ nào bản cũ đã hay thì để yên, đừng viết khác đi cho có. OUTPUT là lời dẫn hoàn chỉnh đã sửa, văn bản thuần, không Markdown, không tiêu đề, không "Dưới đây là", không giải thích đã sửa gì. LỜI MỞ CŨ:
 <HOOK>
 BIBLE:
-<BIBLE>
+<BIBLE><FEEDBACK>
 
 ########## OUTRO ##########
 Viết LỜI KẾT NGẮN cho truyện audio ngôn tình tiếng Việt, khoảng 14400 từ, để đọc voice-over. Đây là lời của kênh nói với người nghe sau khi truyện đã hết, KHÔNG phải một bài bình luận. Đi đúng 3 bước:

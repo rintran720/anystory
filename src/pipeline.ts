@@ -1,4 +1,4 @@
-import fs from"node:fs/promises";import path from"node:path";import{askJSON,retryLLM,validateOutline,validateScenePlan}from"./ollama.js";import{P,getGenre,resolveSetting,settingVars}from"./prompts/index.js";import{exists,writeJSON,writeText,cleanGeneratedStory,dedupeMemoryArrays}from"./utils.js";import type{Config,ProgressEvent,RunUntil}from"./types.js";
+import fs from"node:fs/promises";import path from"node:path";import{askJSON,retryLLM,validateOutline,validateScenePlan}from"./ollama.js";import{P,getGenre,resolveSetting,settingVars}from"./prompts/index.js";import{exists,writeJSON,writeText,cleanGeneratedStory,dedupeMemoryArrays}from"./utils.js";import{measureProse,compareProse,proseFeedback}from"./quality.js";import type{ProseMetrics}from"./quality.js";import type{Config,ProgressEvent,RunUntil}from"./types.js";
 const scoreSum=(s:any):number=>Object.values(s??{}).reduce((a:number,b:any)=>a+(Number(b)||0),0);
 export const needsFix=(r:any):boolean=>!r.error&&(((r.issues??[]) as any[]).some(i=>i?.severity==="cao"||i?.severity==="vừa")||Object.values(r.scores??{}).some((v:any)=>Number(v)<=5));
 const usedModel=(c:Config):string=>c.provider==="deepseek"?c.deepseek.model:c.provider==="claude"?c.claude.model:c.model;
@@ -21,4 +21,20 @@ export async function saveHook(out:string,text:string):Promise<{hook:string;chap
 // HOOKFIX cố tình KHÔNG mang {{SET_*}}: nó chỉ viết lại lời dẫn đã có nên không cần biết
 // bối cảnh, mà cửa duy nhất từng suýt xoá sạch tên nhân vật Trung Quốc lại chính là một
 // câu dọn "từ nước ngoài" nằm trong prompt sửa. Không mở lại cửa đó ở đây.
-export async function rewriteHook(c:Config,out:string):Promise<{hook:string;previous:string;chaptersFound:number;total:number}>{const ec=editorConfig(c),{bible,outline}=await loadStoryFiles(out),pr=getGenre(bible?.genreId),hf=path.join(out,"hook.txt"),old=(await readTextOr(hf,"")).trim();if(!old)throw Error("truyện chưa có lời dẫn để sửa");let fixed:string;try{fixed=cleanGeneratedStory(await retryLLM(ec,P(pr.HOOKFIX,{WORDS:String(pr.hookWords),BIBLE:JSON.stringify(bible),HOOK:old}),{temperature:.5,think:false},3,"Hook rewrite")).trim()}catch(e){if(capacityError(e))throw Error(`${FATAL}viết lại lời dẫn dừng vì nhà cung cấp LLM từ chối: ${e}`);throw e}if(fixed.length<old.length*.5)throw Error(`bản mới ngắn bất thường (${fixed.length}/${old.length} ký tự), giữ nguyên bản cũ`);await backupHook(out,old);await writeText(hf,fixed);return{hook:fixed,previous:old,chaptersFound:await rebuildFinalStory(out,outline),total:outline.chapters.length}}
+// Vòng lặp cải tiến, và toàn bộ lý do nó tồn tại: một lượt viết lại KHÔNG được tin, nó
+// phải tự chứng minh bằng số đo là không làm gì tệ đi. Mỗi lượt: viết lại -> đo -> đạt thì
+// giữ và dừng luôn (nên ca thường gặp vẫn chỉ tốn MỘT lượt gọi), không đạt thì nói đúng
+// chỗ hỏng kèm con số cho lượt sau. Hết lượt mà không bản nào đạt thì GIỮ NGUYÊN bản cũ:
+// nút này hứa nâng chất lượng chứ không hứa đổi chữ, và một bản đo được là tệ hơn thì thà
+// đừng sửa. Đây chính là chỗ mà bản HOOKFIX đầu tiên đã lọt - nó không có cổng nào cả.
+const HOOK_ATTEMPTS=3;
+export interface HookAttempt{attempt:number;regressions:string[];gains:string[]}
+export interface HookResult{kept:boolean;hook:string;previous:string;attempts:HookAttempt[];calls:number;before:ProseMetrics;after:ProseMetrics|null;gains:string[];chaptersFound:number|null;total:number}
+export async function rewriteHook(c:Config,out:string):Promise<HookResult>{const ec=editorConfig(c),{bible,outline}=await loadStoryFiles(out),pr=getGenre(bible?.genreId),hf=path.join(out,"hook.txt"),old=(await readTextOr(hf,"")).trim();if(!old)throw Error("truyện chưa có lời dẫn để sửa");const before=measureProse(old),maxWords=Math.round(pr.hookWords*1.15),attempts:HookAttempt[]=[];let feedback="",winner:{text:string;after:ProseMetrics;gains:string[]}|null=null,calls=0;
+for(let n=1;n<=HOOK_ATTEMPTS&&!winner;n++){let text:string;try{calls++;text=cleanGeneratedStory(await retryLLM(ec,P(pr.HOOKFIX,{WORDS:String(pr.hookWords),BIBLE:JSON.stringify(bible),HOOK:old,FEEDBACK:feedback}),{temperature:.5,think:false},3,`Hook rewrite ${n}/${HOOK_ATTEMPTS}`)).trim()}catch(e){if(capacityError(e))throw Error(`${FATAL}viết lại lời dẫn dừng vì nhà cung cấp LLM từ chối: ${e}`);throw e}
+// Guard cấu trúc chạy TRƯỚC phép đo: một bản bị cắt mất nửa nội dung có thể đo ra rất đẹp
+// (câu nào cũng vừa tầm) trong khi nó đã vứt mất tình tiết. Số đo không thấy được cái thiếu.
+if(text.length<old.length*.5){attempts.push({attempt:n,regressions:[`bản mới bị cắt cụt: ${text.length}/${old.length} ký tự`],gains:[]});feedback=`\nBẢN LẦN TRƯỚC BỊ CẮT MẤT NỘI DUNG. Lần này phải giữ đủ mọi ý của LỜI DẪN CŨ, chỉ đổi cách nói.`;continue}
+const after=measureProse(text),v=compareProse(before,after,{maxWords});attempts.push({attempt:n,regressions:v.regressions,gains:v.gains});console.log(`[HOOK] lượt ${n}: ${v.ok?"đạt":"loại — "+v.regressions.join("; ")}`);if(v.ok)winner={text,after,gains:v.gains};else feedback=proseFeedback(v,before,after,maxWords)}
+if(!winner){console.warn(`[HOOK] giữ nguyên lời dẫn cũ sau ${calls} lượt: không lượt nào tránh được lỗi đo được`);return{kept:false,hook:old,previous:old,attempts,calls,before,after:null,gains:[],chaptersFound:null,total:outline.chapters.length}}
+await backupHook(out,old);await writeText(hf,winner.text);return{kept:true,hook:winner.text,previous:old,attempts,calls,before,after:winner.after,gains:winner.gains,chaptersFound:await rebuildFinalStory(out,outline),total:outline.chapters.length}}
