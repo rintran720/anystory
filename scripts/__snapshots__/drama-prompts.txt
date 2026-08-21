@@ -213,6 +213,34 @@ ISSUES CẦN SỬA:
 CHƯƠNG HIỆN TẠI:
 <TEXT>
 
+########## FIXSPAN ##########
+Sửa lại MỘT SỐ ĐOẠN trong một chương truyện drama tiếng Việt cho voice-over, dựa trên danh sách lỗi biên tập viên đã chỉ ra.
+Bạn nhận CẢ chương đã đánh số đoạn để có đủ ngữ cảnh, nhưng CHỈ những đoạn mang dấu <<<SỬA>>> mới được phép đổi.
+NGUYÊN TẮC BẤT DI BẤT DỊCH: giữ nguyên tình tiết, tên riêng của nhân vật và địa danh (kể cả tên Hán-Việt — đó là bối cảnh truyện, không phải lỗi), tuổi tác, quan hệ, mốc thời gian và mọi con số. Không thêm tình tiết mới, không xoá tình tiết cũ. Chỉ sửa CÁCH KỂ của đúng những đoạn được đánh dấu.
+KHỚP VỚI HAI ĐẦU: đoạn trước và đoạn sau mỗi đoạn bạn sửa sẽ GIỮ NGUYÊN từng chữ. Đoạn bạn viết ra phải nối liền mạch được với chúng — cùng thì, cùng xưng hô, không nhắc lại thứ đoạn trước vừa nói, không bỏ lửng thứ đoạn sau đang chờ.
+MỘT ĐỔI MỘT: mỗi đoạn được đánh dấu trả về ĐÚNG MỘT đoạn. Không gộp hai đoạn làm một, không tách một đoạn thành hai, và TUYỆT ĐỐI không có dòng trống bên trong một đoạn.
+NÓI CHO DỄ HIỂU MÀ VẪN MƯỢT — ĐÂY LÀ VIỆC CHÍNH:
+- Từ đời thường trước. Có từ thuần Việt thay được thì đừng dùng từ Hán-Việt văn vẻ: "nghiệt ngã" thành "cay đắng", "an bài" thành "sắp đặt sẵn", "cơ hàn" thành "nghèo".
+- Câu dài rối thì VIẾT LẠI CHO GỌN, TUYỆT ĐỐI KHÔNG chặt làm đôi. Mỗi câu phải đứng được một mình, đủ chủ ngữ và vị ngữ. Không để lại mảnh cụt kiểu "Bước vào lễ đường in tên chị." — đó là mẩu vụn, không phải câu.
+- Nhịp phải xen kẽ: câu vừa để kể, câu ngắn để nhấn. Ba bốn câu ngắn liên tiếp nghe như đọc gạch đầu dòng chứ không phải kể chuyện. Nối ý bằng từ nối đời thường (rồi, mà, nhưng, vì, thế là) thay vì chấm câu liên tục.
+- Câu quá 25 chữ thường là dấu hiệu rối: gỡ mệnh đề lồng nhau ra, đừng chồng ba ý vào một câu.
+- Thay danh từ trừu tượng bằng thứ nhìn thấy được: đừng nói "bi kịch gia đình", hãy nói "mâm cơm không ai đụng đũa".
+- Xoá chữ hoa mỹ không thêm thông tin gì: "định mệnh", "trớ trêu thay", "ngậm ngùi", "xót xa thay", "dòng đời xô đẩy".
+- Người nghe không tua lại được: phải hiểu ngay lần đầu, nhưng nghe ra là một người đang kể chuyện, không phải một bản tin.
+QUY TẮC RIÊNG CỦA THỂ LOẠI:
+- Xưng hô phải đúng quan hệ trong BIBLE và giữ nhất quán suốt chương.
+- Câu cuối chương phải là sự kiện vật lý hoặc câu thoại đúng như cliffhanger trong OUTLINE, và KHÔNG được có bất kỳ câu tả cảnh nào sau nó.
+Chỉ JSON, không Markdown, không giải thích:
+{"paragraphs":{"3":"nội dung đoạn 3 đã sửa","17":"nội dung đoạn 17 đã sửa"}}
+Khoá phải đúng bằng danh sách <INDEXES> — không thừa một khoá, không thiếu một khoá. Đoạn nào không có dấu <<<SỬA>>> thì TUYỆT ĐỐI không đưa vào kết quả. BIBLE:
+<BIBLE>
+OUTLINE CHƯƠNG NÀY:
+<CHAPTER>
+ISSUES CẦN SỬA:
+<ISSUES>
+CHƯƠNG ĐÃ ĐÁNH SỐ ĐOẠN:
+<TEXT>
+
 ########## FIXVERIFY ##########
 Kiểm tra bản sửa của MỘT CHƯƠNG truyện drama tiếng Việt đã xử lý được những lỗi biên tập viên nêu ra hay chưa. Chỉ JSON, không Markdown:
 {"results":[{"index":0,"fixed":true,"evidence":""}],"newProblems":[""]}

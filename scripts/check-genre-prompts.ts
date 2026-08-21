@@ -63,7 +63,7 @@ for (const g of [d, n])
 // đỏ. Trước vòng sửa thứ hai, nó xanh.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const NAMES = ["ARCH","OUT","SC","WR","HOOK","HOOKFIX","OUTRO","MEM","EDIT","CHECK","REVIEW_CH","REVIEW_SUM","FIXCH","FIXVERIFY"] as const;
+const NAMES = ["ARCH","OUT","SC","WR","HOOK","HOOKFIX","OUTRO","MEM","EDIT","CHECK","REVIEW_CH","REVIEW_SUM","FIXCH","FIXSPAN","FIXVERIFY"] as const;
 const wrRules = (s: string) => s.split("\n").filter(l => /^\d+\. /.test(l));
 
 // WR là chữ ký của thể loại: số quy tắc, quy tắc riêng, và quy tắc của thể loại kia
@@ -172,6 +172,28 @@ must(d.HOOKFIX.includes("Mời quý vị cùng lắng nghe."), "drama HOOKFIX le
 must(!n.HOOKFIX.includes("Mời quý vị cùng lắng nghe."), "ngontinh HOOKFIX pastes the drama channel's closing line into a romance");
 must(n.HOOKFIX.includes('xưng "tôi"'), "ngontinh HOOKFIX no longer holds the heroine's first-person voice");
 must(!d.HOOKFIX.includes("nữ chính"), "drama HOOKFIX has picked up the romance spine's heroine");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIXSPAN sửa từng đoạn thay vì cả chương, để thu nhỏ bán kính nổ của một lượt sửa. Nó
+// ghi đè chương đã viết xong, nên sai ở đây đắt ngang FIXCH.
+const FIXSPAN_VARS = new Set(["{{BIBLE}}", "{{CHAPTER}}", "{{ISSUES}}", "{{TEXT}}", "{{INDEXES}}"]);
+for (const g of [d, n]) {
+  for (const v of FIXSPAN_VARS)
+    must(g.FIXSPAN.includes(v), `${g.id} FIXSPAN no longer carries ${v} — fixStory fills it, so the prompt would lose it silently`);
+  // Cùng chốt chặn như HOOKFIX: FIXSPAN cố ý KHÔNG biết bối cảnh. {{SET_FOREIGN}} là câu
+  // dọn "từ nước ngoài" từng suýt xoá sạch tên nhân vật Trung Quốc khỏi một chương, và
+  // FIXSPAN cũng ghi đè chương y như FIXCH. Nó tự bảo vệ tên riêng bằng chữ cứng.
+  for (const m of g.FIXSPAN.matchAll(/\{\{[A-Z_]+\}\}/g))
+    must(FIXSPAN_VARS.has(m[0]), `${g.id} FIXSPAN uses ${m[0]}, which fixStory never fills — it ships to the model literally`);
+  must(g.FIXSPAN.includes("giữ nguyên tình tiết"), `${g.id} FIXSPAN no longer freezes the plot`);
+  must(g.FIXSPAN.includes("kể cả tên Hán-Việt"), `${g.id} FIXSPAN no longer protects Sino-Vietnamese names`);
+  must(g.FIXSPAN.includes("MỘT ĐỔI MỘT"), `${g.id} FIXSPAN no longer forbids merging or splitting paragraphs — the splice counts on one-for-one`);
+  must(g.FIXSPAN.includes("<<<SỬA>>>"), `${g.id} FIXSPAN no longer tells the model which marker selects a paragraph`);
+  must(g.FIXSPAN.includes("NÓI CHO DỄ HIỂU"), `${g.id} FIXSPAN lost the plain-language block that HOOKFIX shares`);
+  must(g.FIXSPAN.includes("KHÔNG chặt làm đôi"), `${g.id} FIXSPAN no longer stops the model chopping sentences into fragments`);
+}
+must(n.FIXSPAN.includes("GIỮ GIỌNG"), "ngontinh FIXSPAN dropped the do-not-flatten-the-voice rule its FIXCH carries");
+must(!d.FIXSPAN.includes("GIỮ GIỌNG"), "drama FIXSPAN picked up the romance spine's voice rule");
 
 // Mỗi SettingPack phải đủ chữ: một trường rỗng không làm gì đổ, nó chỉ lặng lẽ dán một
 // khoảng trắng vào đúng chỗ đáng ra phải mô tả cả một thế giới.
