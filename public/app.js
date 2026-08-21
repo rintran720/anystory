@@ -106,6 +106,19 @@ async function openCreateForm(prefillName) {
   const settingSelect = document.getElementById("field-setting");
   settingSelect.innerHTML = (defaults.settings ?? []).map(s => `<option value="${s.id}">${s.label}</option>`).join("");
   settingSelect.value = defaults.setting ?? "auto";
+
+  // prefillName chỉ có khi mở form để CHẠY TIẾP một truyện đã có trên đĩa. Thể loại và
+  // bối cảnh của truyện đó đã bị đóng dấu vào story_bible.json và server bỏ qua mọi giá
+  // trị gửi lên, nên hiện hai ô này ra là nói dối người dùng theo cả hai chiều. Giấu hẳn,
+  // và ô bị giấu cũng không được gửi lên (xem handler submit).
+  document.getElementById("field-genre-wrap").hidden = Boolean(prefillName);
+  document.getElementById("field-setting-wrap").hidden = Boolean(prefillName);
+}
+
+// Ô đang bị giấu (chạy tiếp một truyện cũ) thì không gửi giá trị của nó lên.
+function fieldIfShown(id) {
+  const el = document.getElementById(id);
+  return document.getElementById(`${id}-wrap`).hidden ? undefined : (el.value || undefined);
 }
 
 document.getElementById("field-duration").addEventListener("input", suggestFromDuration);
@@ -328,8 +341,8 @@ document.getElementById("create-form").addEventListener("submit", async ev => {
     chapters: document.getElementById("field-chapters").value || undefined,
     scenesPerChapter: document.getElementById("field-scenes").value || undefined,
     durationMinutes: document.getElementById("field-duration").value || undefined,
-    genre: document.getElementById("field-genre").value || undefined,
-    setting: document.getElementById("field-setting").value || undefined,
+    genre: fieldIfShown("field-genre"),
+    setting: fieldIfShown("field-setting"),
     runUntil,
     chapterLimit: runUntil === "chapters" ? (document.getElementById("field-chapter-limit").value || undefined) : undefined
   };
@@ -425,6 +438,13 @@ async function refreshReviewPanel(name) {
   const data = await res.json();
   state.currentBible = data.bible;
   state.currentOutline = data.outline;
+  // Nút "Sửa N chương" chạy theo thể loại/bối cảnh đóng dấu trong bible, không theo cài
+  // đặt hiện tại - nên màn hình phải nói ra nó đang là truyện gì trước khi người dùng bấm.
+  const genreEl = document.getElementById("run-genre");
+  genreEl.hidden = !data.bible;
+  genreEl.textContent = data.bible
+    ? genreSettingLabel({ genre: data.bible.genreId ?? null, setting: data.bible.settingId ?? null })
+    : "";
   state.currentReview = data.review;
   document.getElementById("review-panel").hidden = !data.bible && !data.outline;
   document.getElementById("btn-view-bible").hidden = !data.bible;
@@ -566,8 +586,13 @@ document.getElementById("btn-view-review").addEventListener("click", () => {
 const GENRE_LABELS = { drama: "Drama gia đình", ngontinh: "Ngôn tình sủng" };
 const SETTING_LABELS = { vietnam: "Việt Nam", china: "Trung Quốc" };
 
+// Hai trường hợp khác hẳn nhau: KHÔNG có dấu (truyện đời cũ, đúng là drama/Việt Nam) và
+// CÓ dấu nhưng lạ (thể loại thứ ba chưa có nhãn ở đây). Trường hợp sau phải hiện đúng id
+// thô, gán bừa nhãn drama cho nó là dán sai nhãn lên một truyện ngôn tình hoặc hơn thế.
 function genreSettingLabel(story) {
-  return `${GENRE_LABELS[story.genre] ?? "Drama gia đình"} · ${SETTING_LABELS[story.setting] ?? "Việt Nam"}`;
+  const genre = story.genre ? (GENRE_LABELS[story.genre] ?? story.genre) : "Drama gia đình";
+  const setting = story.setting ? (SETTING_LABELS[story.setting] ?? story.setting) : "Việt Nam";
+  return `${genre} · ${setting}`;
 }
 
 // The two genres score chapters on different last-two criteria, so headers and

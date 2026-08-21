@@ -1,4 +1,5 @@
-import {getGenre, GENRES} from "../src/prompts/index.js";
+import {getGenre, GENRES, SETTINGS, SETTINGS_LIST, settingVars} from "../src/prompts/index.js";
+import {MEMORY_CAPS} from "../src/utils.js";
 
 const fails: string[] = [];
 const must = (cond: boolean, msg: string) => { if (!cond) fails.push(msg); };
@@ -118,6 +119,53 @@ for (const p of ["CHECK", "REVIEW_CH", "REVIEW_SUM", "EDIT", "FIXCH", "FIXVERIFY
 
 // Trường nào ARCH đòi thì phải có nơi tiêu thụ, nếu không nó chỉ tốn token
 must(n.OUT.includes("signatureLine"), "ngontinh asks ARCH for signatureLine but no downstream prompt ever uses it");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trục bối cảnh. Các khẳng định "Việt Nam" ở trên chỉ bắt được kiểu phá hoại viết
+// thẳng tên nước vào prompt; chúng mù trước kiểu phá hoại ngược lại và nguy hiểm hơn:
+// XOÁ biến {{SET_*}} đi rồi thay bằng chữ cứng. Prompt vẫn chạy, truyện vẫn ra, chỉ là
+// ra sai thế giới — và riêng {{SET_FOREIGN}} trong FIXCH thì bản sửa sẽ xoá luôn tên
+// Hán-Việt của cả dàn nhân vật ở bối cảnh Trung Quốc.
+// Bảng dưới là bảng ĐẦY ĐỦ: biến nào phải nằm ở prompt nào, và không được nằm chỗ khác.
+const SET_SLOTS: Record<string, Record<string, string>> = {
+  // Ngôn tình cố ý KHÔNG có {{SET_PROVERB}}: HOOK của nó cấm mở bằng tục ngữ.
+  drama: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", HOOK: "{{SET_PROVERB}}", FIXCH: "{{SET_FOREIGN}}"},
+  ngontinh: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", FIXCH: "{{SET_FOREIGN}}"}
+};
+const SET_VARS = new Set(Object.keys(settingVars("vietnam")).map(k => `{{${k}}}`));
+must(SET_VARS.size === 5, `settingVars fills ${SET_VARS.size} variables, the prompts are written against 5`);
+for (const g of [d, n]) {
+  const slots = SET_SLOTS[g.id];
+  for (const [p, v] of Object.entries(slots))
+    must((g[p as keyof typeof g] as string).includes(v),
+      `${g.id} ${p} no longer carries ${v} — that prompt has stopped following the setting`);
+  for (const p of NAMES)
+    for (const m of (g[p] as string).matchAll(/\{\{SET_[A-Z_]*\}\}/g)) {
+      must(SET_VARS.has(m[0]), `${g.id} ${p} uses ${m[0]}, which settingVars never fills — it ships to the model literally`);
+      must(slots[p] === m[0], `${g.id} ${p} carries ${m[0]}, which the setting map does not put there`);
+    }
+}
+must(!n.HOOK.includes("{{SET_PROVERB}}"), "ngontinh HOOK now carries {{SET_PROVERB}} — its hook is not allowed to open on a proverb");
+
+// Mỗi SettingPack phải đủ chữ: một trường rỗng không làm gì đổ, nó chỉ lặng lẽ dán một
+// khoảng trắng vào đúng chỗ đáng ra phải mô tả cả một thế giới.
+const PACK_FIELDS = ["label", "names", "detail", "prop", "proverb", "foreign"] as const;
+for (const [id, pack] of Object.entries(SETTINGS)) {
+  must(pack.id === id, `SETTINGS["${id}"] holds a pack whose id is "${pack.id}"`);
+  for (const f of PACK_FIELDS)
+    must(typeof pack[f] === "string" && pack[f].trim().length > 0, `SettingPack ${id} has an empty ${f}`);
+  must(SETTINGS_LIST.some(s => s.id === id), `setting ${id} exists but is not offered in SETTINGS_LIST`);
+}
+// Mệnh đề foreign của Trung Quốc phải là mệnh đề ĐẢO, không phải bản sao của Việt Nam.
+must(SETTINGS.china.foreign !== SETTINGS.vietnam.foreign, "china foreign clause is a copy of vietnam's — the fix pass will delete the Han-Viet cast");
+must(SETTINGS.china.foreign.includes("GIỮ NGUYÊN"), "china foreign clause no longer orders the editor to KEEP the Han-Viet names");
+
+// Danh sách chống lặp của mỗi thể loại phải có trần trong dedupeMemoryArrays, nếu không
+// nó lớn mãi và được nhét nguyên vào MEMORY của mọi prompt về sau.
+for (const g of [d, n])
+  for (const k of g.usedMemoryKeys)
+    must(MEMORY_CAPS[k] !== undefined,
+      `${g.id} tracks ${k} in usedMemoryKeys but dedupeMemoryArrays has no cap for it — that list grows unbounded`);
 
 // actsText phải CHIA ĐÚNG 1..N thành ba hồi liền nhau, không phải chỉ trả về chuỗi khác rỗng
 for (const g of [d, n]) {

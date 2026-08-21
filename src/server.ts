@@ -6,7 +6,7 @@ import { exists } from "./utils.js";
 import { generateStory, reviewStory, fixStory, needsFix } from "./pipeline.js";
 import { runTTS } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
-import { GENRES, SETTINGS_LIST } from "./prompts/index.js";
+import { GENRES, SETTINGS_LIST, getGenre, resolveSetting } from "./prompts/index.js";
 import type { ProgressEvent, TtsProgressEvent, RunUntil, JobStatus, JobSummary } from "./types.js";
 import type { Config, GenreId, SettingId } from "./types.js";
 
@@ -363,6 +363,16 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
     return { ok: false, name, status: 400, error: `unknown setting: ${input.setting}` };
   }
 
+  // Truyện đã có story_bible.json thì thể loại và bối cảnh là của chính nó, không phải
+  // của cái form vừa mở: chạy tiếp không được đổi danh tính truyện. Bible đời cũ chưa có
+  // dấu thì đọc ra đúng mặc định mà mọi chỗ khác đang đọc nó (drama + bối cảnh mặc định
+  // của drama), chứ không phải mặc định toàn cục lúc này.
+  const storedBible = bibleExists
+    ? await readJSONIfExists(path.join(outDir, "story_bible.json"))
+    : null;
+  const resumedGenre = bibleExists ? getGenre(storedBible?.genreId).id : null;
+  const resumedSetting = bibleExists ? resolveSetting(storedBible?.genreId, storedBible?.settingId) : null;
+
   const settingsOverrides = await loadSettingsOverrides();
   const baseConfig = { ...config, ...settingsOverrides };
   maxParallelStories = baseConfig.maxParallelStories;
@@ -371,8 +381,8 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
     chapters: input.chapters ? Number(input.chapters) : baseConfig.chapters,
     scenesPerChapter: input.scenesPerChapter ? Number(input.scenesPerChapter) : baseConfig.scenesPerChapter,
     durationMinutes: input.durationMinutes ? Number(input.durationMinutes) : baseConfig.durationMinutes,
-    genre: (input.genre || baseConfig.genre) as GenreId,
-    setting: (input.setting || baseConfig.setting) as SettingId | "auto"
+    genre: (resumedGenre || input.genre || baseConfig.genre) as GenreId,
+    setting: (resumedSetting || input.setting || baseConfig.setting) as SettingId | "auto"
   };
 
   let runUntilArg: RunUntil | undefined;

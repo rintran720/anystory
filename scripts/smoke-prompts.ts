@@ -10,7 +10,8 @@ const pr = getGenre(genreId);
 if (pr.id !== genreId) { console.error(`Unknown genre: ${genreId}`); process.exit(1); }
 const ideaFile = genreId === "ngontinh" ? "stories/example-ngontinh/idea.txt" : "stories/example/idea.txt";
 const c = {...config, ...await loadSettingsOverrides(), chapters: 6, genre: pr.id};
-const sv = settingVars(resolveSetting(c.genre, c.setting));
+const sid = resolveSetting(c.genre, c.setting);
+const sv = settingVars(sid);
 const out = path.resolve("output", `_smoke-${pr.id}`);
 await fs.mkdir(out, {recursive: true});
 const idea = (await fs.readFile(ideaFile, "utf8")).trim();
@@ -27,6 +28,10 @@ for (const [k, v] of Object.entries(bible)) {
 }
 for (const [k, v] of chapterFields)
   console.log(`  ${v >= 1 && v <= c.chapters ? "OK " : "OUT-OF-RANGE"} ${k} = ${v} (1..${c.chapters})`);
+// generateStory đóng dấu hai trường này vào bible; đường iterate rẻ này phải đóng dấu
+// giống hệt, nếu không output/_smoke-* đọc ra như một truyện drama đời cũ.
+bible.genreId = pr.id;
+bible.settingId = sid;
 await fs.writeFile(path.join(out, "story_bible.json"), JSON.stringify(bible, null, 2));
 console.log("coldOpen:", JSON.stringify(bible.coldOpen, null, 1));
 console.log("tellDetail:", JSON.stringify(bible.tellDetail, null, 1));

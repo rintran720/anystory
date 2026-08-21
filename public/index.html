@@ -91,8 +91,8 @@
 
     <fieldset>
       <legend>Cấu hình (để trống = mặc định)</legend>
-      <label>Thể loại <select id="field-genre"></select></label>
-      <label>Bối cảnh <select id="field-setting"></select></label>
+      <label id="field-genre-wrap">Thể loại <select id="field-genre"></select></label>
+      <label id="field-setting-wrap">Bối cảnh <select id="field-setting"></select></label>
       <label>Thời lượng (phút) <input type="number" id="field-duration" min="1"></label>
       <label>Số chương <input type="number" id="field-chapters" min="1"></label>
       <label>Số cảnh/chương <input type="number" id="field-scenes" min="1"></label>
@@ -173,6 +173,7 @@
 <section id="view-run" hidden>
   <button class="btn-back" data-target="view-home">&larr; Quay lại</button>
   <h2 id="run-title"></h2>
+  <p id="run-genre" class="hint" hidden></p>
 
   <div id="run-progress">
     <div class="progress-bar"><div id="run-progress-fill" class="progress-fill"></div></div>
