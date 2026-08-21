@@ -56,6 +56,7 @@ input[type="text"], input[type="number"], textarea, select {
 }
 fieldset { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
 fieldset label { display: inline-block; width: 48%; margin-right: 2%; }
+fieldset label[hidden] { display: none; }
 
 .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
 .tab-btn { background: var(--panel); color: var(--text-dim); border: 1px solid var(--border); }
