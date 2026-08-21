@@ -98,6 +98,14 @@ async function openCreateForm(prefillName) {
   document.getElementById("field-chapters").value = defaults.chapters;
   document.getElementById("field-scenes").value = defaults.scenesPerChapter;
   document.getElementById("field-duration").value = defaults.durationMinutes;
+
+  const genreSelect = document.getElementById("field-genre");
+  genreSelect.innerHTML = (defaults.genres ?? []).map(g => `<option value="${g.id}">${g.label}</option>`).join("");
+  genreSelect.value = defaults.genre ?? "drama";
+
+  const settingSelect = document.getElementById("field-setting");
+  settingSelect.innerHTML = (defaults.settings ?? []).map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+  settingSelect.value = defaults.setting ?? "auto";
 }
 
 document.getElementById("field-duration").addEventListener("input", suggestFromDuration);
@@ -224,6 +232,7 @@ async function loadHome() {
 
     tr.innerHTML = `
       <td></td>
+      <td>${genreSettingLabel(story)}</td>
       <td>${statusText}</td>
       <td class="${scoreClass(story.reviewScore)}" title="${story.staleChapters ? `${story.staleChapters} chương đã viết lại sau lần chấm điểm` : ""}">${story.reviewScore ?? "—"}${story.staleChapters ? " ⚠" : ""}</td>
       <td>
@@ -319,6 +328,8 @@ document.getElementById("create-form").addEventListener("submit", async ev => {
     chapters: document.getElementById("field-chapters").value || undefined,
     scenesPerChapter: document.getElementById("field-scenes").value || undefined,
     durationMinutes: document.getElementById("field-duration").value || undefined,
+    genre: document.getElementById("field-genre").value || undefined,
+    setting: document.getElementById("field-setting").value || undefined,
     runUntil,
     chapterLimit: runUntil === "chapters" ? (document.getElementById("field-chapter-limit").value || undefined) : undefined
   };
@@ -552,7 +563,34 @@ document.getElementById("btn-view-review").addEventListener("click", () => {
   openReview(state.currentStoryName);
 });
 
-const CHAPTER_CRITERIA = ["hook", "nhipDo", "showKhongTell", "hoiThoai", "cangThang", "nhanVat"];
+const GENRE_LABELS = { drama: "Drama gia đình", ngontinh: "Ngôn tình sủng" };
+const SETTING_LABELS = { vietnam: "Việt Nam", china: "Trung Quốc" };
+
+function genreSettingLabel(story) {
+  return `${GENRE_LABELS[story.genre] ?? "Drama gia đình"} · ${SETTING_LABELS[story.setting] ?? "Việt Nam"}`;
+}
+
+// The two genres score chapters on different last-two criteria, so headers and
+// cells both read their keys from the report itself rather than a hardcoded list -
+// an unknown key still renders (as itself) instead of turning into "undefined".
+const CRITERIA_LABELS_SHORT = {
+  hook: "Hook", nhipDo: "Nhịp", showKhongTell: "Show", hoiThoai: "Thoại",
+  cangThang: "Căng", nhanVat: "N.vật",
+  ngotNgao: "Ngọt", namChinh: "Nam chính"
+};
+const CRITERIA_LABELS_FULL = {
+  hook: "Hook", nhipDo: "Nhịp độ", showKhongTell: "Show không tell", hoiThoai: "Hội thoại",
+  cangThang: "Căng thẳng", nhanVat: "Nhân vật",
+  ngotNgao: "Độ ngọt", namChinh: "Nam chính"
+};
+const criteriaLabelShort = key => CRITERIA_LABELS_SHORT[key] ?? key;
+const criteriaLabelFull = key => CRITERIA_LABELS_FULL[key] ?? key;
+const criteriaKeys = scores => Object.keys(scores ?? {});
+// Header and cells must read the same key set, or a score renders under the
+// wrong heading - so both come from the first scored chapter in the report.
+function reportCriteriaKeys(review) {
+  return criteriaKeys((review?.chapters ?? []).find(c => c.scores)?.scores);
+}
 const SUMMARY_CRITERIA = [
   ["cauTruc", "Cấu trúc"], ["vongCungNhanVat", "Vòng cung nhân vật"], ["caoTrao", "Cao trào"],
   ["ketThuc", "Kết thúc"], ["doMoiLa", "Độ mới lạ"], ["bamMoralMotif", "Bám moral/motif"]
@@ -604,6 +642,22 @@ function renderReview(name, review, fixReport, staleChapters = []) {
   if (!issuesEl.children.length) issuesEl.innerHTML = '<p class="hint">Không có lỗi nào được nêu.</p>';
 
   const fixByChapter = new Map((fixReport?.fixes ?? []).map(f => [f.chapter, f]));
+  const keys = reportCriteriaKeys(review);
+  const header = document.getElementById("review-chapter-header");
+  header.innerHTML = "";
+  const chHeader = document.createElement("th");
+  chHeader.textContent = "Ch.";
+  header.appendChild(chHeader);
+  for (const key of keys) {
+    const th = document.createElement("th");
+    th.textContent = criteriaLabelShort(key);
+    th.title = criteriaLabelFull(key);
+    header.appendChild(th);
+  }
+  const fixHeader = document.createElement("th");
+  fixHeader.textContent = "Sửa";
+  header.appendChild(fixHeader);
+
   const body = document.getElementById("review-chapter-body");
   body.innerHTML = "";
   document.getElementById("review-chapter-detail").innerHTML = "";
@@ -629,7 +683,7 @@ function renderReview(name, review, fixReport, staleChapters = []) {
     }
     tr.appendChild(first);
 
-    for (const key of CHAPTER_CRITERIA) {
+    for (const key of keys) {
       const td = document.createElement("td");
       const value = chapter.scores?.[key];
       td.textContent = chapter.error ? "lỗi" : (value ?? "—");
@@ -742,6 +796,15 @@ function showChapterDetail(chapter, fix) {
     p.textContent = "Chấm điểm thất bại: " + chapter.error;
     el.appendChild(p);
     return;
+  }
+
+  if (chapter.scores) {
+    const scoresLine = document.createElement("p");
+    scoresLine.className = "hint";
+    scoresLine.textContent = criteriaKeys(chapter.scores)
+      .map(key => `${criteriaLabelFull(key)}: ${chapter.scores[key] ?? "—"}`)
+      .join(" · ");
+    el.appendChild(scoresLine);
   }
 
   if (fix) {

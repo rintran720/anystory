@@ -21,7 +21,7 @@
   </div>
 
   <table id="story-table">
-    <thead><tr><th>Tên</th><th>Trạng thái</th><th>Điểm</th><th>Hành động</th></tr></thead>
+    <thead><tr><th>Tên</th><th>Thể loại</th><th>Trạng thái</th><th>Điểm</th><th>Hành động</th></tr></thead>
     <tbody id="story-table-body"></tbody>
   </table>
 </section>
@@ -47,7 +47,7 @@
   <h3>Điểm từng chương</h3>
   <p class="hint">Bấm vào một chương để xem chi tiết lỗi. Điểm ≤5 là hỏng, 6 là nhạt, ≥7 là nghe được.</p>
   <table id="review-chapter-table">
-    <thead><tr><th>Ch.</th><th>Hook</th><th>Nhịp</th><th>Show</th><th>Thoại</th><th>Căng</th><th>N.vật</th><th>Sửa</th></tr></thead>
+    <thead><tr id="review-chapter-header"></tr></thead>
     <tbody id="review-chapter-body"></tbody>
   </table>
   <div id="review-chapter-detail"></div>
@@ -91,6 +91,8 @@
 
     <fieldset>
       <legend>Cấu hình (để trống = mặc định)</legend>
+      <label>Thể loại <select id="field-genre"></select></label>
+      <label>Bối cảnh <select id="field-setting"></select></label>
       <label>Thời lượng (phút) <input type="number" id="field-duration" min="1"></label>
       <label>Số chương <input type="number" id="field-chapters" min="1"></label>
       <label>Số cảnh/chương <input type="number" id="field-scenes" min="1"></label>
