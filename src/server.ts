@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import { EventEmitter } from "node:events";
 import { exists } from "./utils.js";
 import { generateStory, reviewStory, fixStory, needsFix, saveHook, rewriteHook } from "./pipeline.js";
-import { runTTS } from "./tts/index.js";
+import { runTTS, refTextFor, isVoiceFile, VOICES_DIR, DEFAULT_REF_AUDIO } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
 import { GENRES, SETTINGS_LIST, getGenre, resolveSetting } from "./prompts/index.js";
 import type { ProgressEvent, TtsProgressEvent, RunUntil, JobStatus, JobSummary } from "./types.js";
@@ -665,6 +665,19 @@ app.get("/api/generate/stream", (req, res) => {
   req.on("close", () => progressEmitter.off("generate", onEvent));
 });
 
+// Dropdown giọng đọc lấy từ đĩa chứ không hardcode: thả một file mới vào voices/ là thấy
+// ngay, không phải sửa code. hasTranscript cho biết giọng nào đã có file lời đọc đi kèm -
+// giọng chưa có vẫn dùng được, chỉ là nhân bản kém chính xác hơn một chút.
+app.get("/api/voices", async (req, res) => {
+  const dir = path.resolve(VOICES_DIR);
+  const names = (await fs.readdir(dir).catch(() => [])).filter(isVoiceFile).sort();
+  const files = await Promise.all(names.map(async name => ({
+    name,
+    hasTranscript: await exists(path.join(dir, name.replace(/\.[^.]+$/, "") + ".txt"))
+  })));
+  res.json({ files, default: path.basename(process.env.TTS_REF_AUDIO ?? DEFAULT_REF_AUDIO) });
+});
+
 app.post("/api/tts/:name", async (req, res) => {
   const name = req.params.name;
   const silenceGapMs = req.body?.silenceGapMs != null && req.body.silenceGapMs !== ""
@@ -687,11 +700,23 @@ app.post("/api/tts/:name", async (req, res) => {
     return res.status(404).json({ error: "story not found" });
   }
 
-  const refAudio = path.resolve(process.env.TTS_REF_AUDIO ?? "voices/minhthu.mp3");
+  // Giọng chọn tại nút chỉ áp cho lượt chạy này, không ghi vào cấu hình - cùng khuôn với
+  // ô chọn provider/model của Chấm điểm. Không chọn thì rơi về TTS_REF_AUDIO rồi mới tới
+  // mặc định. Tên file đi qua resolveUnder nên không thoát ra ngoài voices/ được, và đi
+  // trong body JSON nên tên có dấu cách hay ngoặc vẫn nguyên vẹn.
+  const picked = String(req.body?.refAudio ?? "").trim();
+  const refAudio = picked
+    ? resolveUnder(path.resolve(VOICES_DIR), picked)
+    : path.resolve(process.env.TTS_REF_AUDIO ?? DEFAULT_REF_AUDIO);
+  if (!refAudio) {
+    ttsJob = null;
+    return res.status(400).json({ error: "tên file giọng không hợp lệ" });
+  }
   if (!(await exists(refAudio))) {
     ttsJob = null;
     return res.status(400).json({ error: `Voice sample not found: ${refAudio}` });
   }
+  const refText = await refTextFor(refAudio);
 
   const pushEvent = (e: TtsProgressEvent) => {
     job.events.push(e);
@@ -706,7 +731,7 @@ app.post("/api/tts/:name", async (req, res) => {
           pythonCommand: config.tts.pythonCommand,
           voice: config.tts.voice,
           refAudio,
-          refText: process.env.TTS_REF_TEXT ?? "",
+          refText,
           pipeOutput: true,
           silenceGapMs
         },

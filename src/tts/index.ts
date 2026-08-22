@@ -184,6 +184,24 @@ async function createManifest(storyDir: string) {
   return { manifestPath, ttsDir, segments };
 }
 
+export const VOICES_DIR = "voices";
+export const DEFAULT_REF_AUDIO = "voices/minhthu.mp3";
+const VOICE_EXT = [".mp3", ".wav", ".m4a", ".flac", ".ogg"];
+export const isVoiceFile = (name: string) => VOICE_EXT.includes(path.extname(name).toLowerCase());
+
+// Bản ghi lời của file mẫu, dùng để nhân bản giọng chính xác hơn. Một biến môi trường
+// TTS_REF_TEXT không phục vụ nổi nhiều giọng: gửi lời của giọng A kèm âm của giọng B là
+// nói dối bộ nhân bản - nó tưởng mẫu đọc câu này trong khi mẫu đọc câu khác - và thường
+// cho kết quả tệ hơn hẳn so với không gửi gì. Nên bản ghi lời đi kèm CHÍNH file giọng đó:
+// voices/minhthu.mp3 -> voices/minhthu.txt. Không có file kèm thì chỉ dùng TTS_REF_TEXT
+// khi đang chạy đúng giọng mà biến môi trường trỏ tới, còn lại để trống.
+export async function refTextFor(refAudio: string): Promise<string> {
+  const sidecar = refAudio.replace(/\.[^.\/]+$/, "") + ".txt";  // loại cả \ và / để thư mục có dấu chấm không bị cắt nhầm trên Windows
+  if (await exists(sidecar)) return (await fs.readFile(sidecar, "utf8")).trim();
+  const envAudio = path.resolve(process.env.TTS_REF_AUDIO ?? DEFAULT_REF_AUDIO);
+  return path.resolve(refAudio) === envAudio ? (process.env.TTS_REF_TEXT ?? "").trim() : "";
+}
+
 export interface TTSOptions {
   pythonCommand: string;
   voice: string;
@@ -231,7 +249,7 @@ export async function runTTS(
   if (!(await exists(opts.refAudio))) {
     throw Error(
       `Voice sample not found: ${opts.refAudio}\n` +
-      `Put your sample at voices/minhthu.mp3 or set TTS_REF_AUDIO.`
+      `Put your sample at ${DEFAULT_REF_AUDIO} or set TTS_REF_AUDIO.`
     );
   }
 
@@ -298,10 +316,8 @@ async function main() {
   const story = path.resolve(process.argv[2] ?? "");
   if (!story) throw Error("Usage: npm run tts -- .\\output\\idea");
 
-  const refAudio = path.resolve(
-    process.env.TTS_REF_AUDIO ?? "voices/minhthu.mp3"
-  );
-  const refText = process.env.TTS_REF_TEXT ?? "";
+  const refAudio = path.resolve(process.env.TTS_REF_AUDIO ?? DEFAULT_REF_AUDIO);
+  const refText = await refTextFor(refAudio);
 
   await runTTS(story, {
     pythonCommand: config.tts.pythonCommand,

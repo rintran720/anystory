@@ -432,6 +432,7 @@ async function openStory(name) {
 
   const cfg = await fetch("/api/config").then(r => r.json());
   document.getElementById("field-silence-gap").value = cfg.silenceGapMs;
+  await loadVoices();
 
   if (data.hasFinalStory) {
     document.getElementById("run-result").hidden = false;
@@ -1086,10 +1087,11 @@ document.getElementById("btn-run-tts").addEventListener("click", async () => {
   setTtsStatus("Đang bắt đầu...");
 
   const silenceGapMs = document.getElementById("field-silence-gap").value || undefined;
+  const refAudio = document.getElementById("field-ref-audio").value || undefined;
   const res = await fetch(`/api/tts/${encodeURIComponent(name)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ silenceGapMs })
+    body: JSON.stringify({ silenceGapMs, refAudio })
   });
   const data = await res.json();
   if (!res.ok) {
@@ -1099,6 +1101,25 @@ document.getElementById("btn-run-tts").addEventListener("click", async () => {
 
   connectTtsStream(name);
 });
+
+// Danh sách giọng đọc thẳng từ thư mục voices/, không hardcode: thả file mới vào là thấy
+// ngay. Giọng chưa có file lời đọc đi kèm vẫn chạy được nên chỉ ghi chú chứ không loại -
+// bản ghi lời giúp nhân bản sát hơn, không phải điều kiện bắt buộc.
+async function loadVoices() {
+  const el = document.getElementById("field-ref-audio");
+  const data = await fetch("/api/voices").then(r => r.json()).catch(() => null);
+  el.innerHTML = "";
+  // Dựng bằng DOM chứ không ghép chuỗi HTML: tên file thật có dấu cách và ngoặc đơn
+  // ("vi_female_hoaian_mb (mp3cut.net).mp3"), ghép chuỗi là mời lỗi vào nhà.
+  for (const f of data?.files ?? [])
+    el.appendChild(new Option(f.hasTranscript ? f.name : `${f.name} — chưa có lời đọc`, f.name));
+  el.disabled = !el.options.length;
+  if (!el.options.length) {
+    el.appendChild(new Option("(thư mục voices/ chưa có file giọng nào)", ""));
+    return;
+  }
+  if ([...el.options].some(o => o.value === data?.default)) el.value = data.default;
+}
 
 function connectTtsStream(name) {
   const source = new EventSource(`/api/tts/${encodeURIComponent(name)}/stream`);
