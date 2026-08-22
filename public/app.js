@@ -761,7 +761,13 @@ function renderReview(name, review, fixReport, staleChapters = []) {
 
   const issuesEl = document.getElementById("review-top-issues");
   issuesEl.innerHTML = "";
-  for (const issue of summary?.topIssues ?? []) issuesEl.appendChild(issueCard(issue, issue.chapters));
+  // REVIEW_SUM đôi khi ghi chỉ số mảng 0-based vào "chapters" thay vì số chương thật, nên
+  // báo cáo đã lưu trên đĩa có thể chứa "chương 0". Lọc ở đây chứ không chỉ chặn lúc sinh:
+  // báo cáo cũ vẫn phải hiện đúng mà người dùng không phải trả tiền chấm lại. Một nhãn chỉ
+  // sai chương tệ hơn không có nhãn nào - cùng lý lẽ với nhãn "cũ" của điểm lỗi thời.
+  const realChapters = new Set((review?.chapters ?? []).map(c => Number(c.chapter)));
+  for (const issue of summary?.topIssues ?? [])
+    issuesEl.appendChild(issueCard(issue, (issue.chapters ?? []).filter(n => realChapters.has(Number(n)))));
   if (!issuesEl.children.length) issuesEl.innerHTML = '<p class="hint">Không có lỗi nào được nêu.</p>';
 
   const fixByChapter = new Map((fixReport?.fixes ?? []).map(f => [f.chapter, f]));

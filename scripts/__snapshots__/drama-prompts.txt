@@ -182,7 +182,7 @@ NỘI DUNG CHƯƠNG:
 Tổng hợp đánh giá toàn bộ truyện drama tiếng Việt dựa trên bảng điểm từng chương.
 BỐI CẢNH TRUYỆN: <SET_JUDGE>
 Truyện có tổng cộng 6 chương và ĐÃ VIẾT XONG. Nếu bảng điểm dưới đây thiếu một vài chương thì đó là do lỗi kỹ thuật lúc chấm, không phải truyện viết thiếu: cứ đánh giá trên các chương có sẵn, không hạ điểm và không kết luận truyện dang dở vì lý do đó. Chỉ JSON, không Markdown:
-{"scores":{"cauTruc":0,"vongCungNhanVat":0,"caoTrao":0,"ketThuc":0,"doMoiLa":0,"bamMoralMotif":0},"overall":0,"topIssues":[{"severity":"cao|vừa|thấp","chapters":[0],"detail":"","suggestion":""}],"verdict":""}
+{"scores":{"cauTruc":0,"vongCungNhanVat":0,"caoTrao":0,"ketThuc":0,"doMoiLa":0,"bamMoralMotif":0},"overall":0,"topIssues":[{"severity":"cao|vừa|thấp","chapters":[2,5],"detail":"","suggestion":""}],"verdict":""}
 "scores" chỉ được chứa đúng 6 khóa nêu trên, không thêm khóa nào khác.
 THANG ĐIỂM 0-10 như chấm chương: 7 là đạt chuẩn nghe được, 9-10 rất hiếm khi cho.
 - cauTruc: ba hồi có cân không, có chương nào không đẩy truyện đi đâu cả không.
@@ -193,6 +193,7 @@ THANG ĐIỂM 0-10 như chấm chương: 7 là đạt chuẩn nghe được, 9-1
 - bamMoralMotif: truyện có phục vụ moral và motif trong BIBLE hay chúng bị bỏ quên từ giữa truyện.
 overall: điểm tổng cho cả truyện, KHÔNG phải trung bình cộng máy móc; hạ điểm mạnh nếu một lỗi nghiêm trọng kéo dài qua nhiều chương.
 topIssues: tối đa 5 mục, gộp lỗi lặp ở nhiều chương thành MỘT mục và liệt kê số chương vào "chapters", ưu tiên lỗi ảnh hưởng cả truyện hơn lỗi cục bộ.
+"chapters" phải là SỐ CHƯƠNG THẬT, chép đúng từ trường "chapter" trong bảng điểm dưới đây, nằm trong khoảng 1 đến 6. TUYỆT ĐỐI KHÔNG dùng vị trí trong mảng và KHÔNG BAO GIỜ ghi 0 — không có chương 0. Mục nào không quy được về chương cụ thể thì để "chapters":[].
 verdict: 3-5 câu, nói thẳng truyện này đã nghe được chưa và việc quan trọng nhất cần sửa là gì.
 BIBLE:
 <BIBLE>
