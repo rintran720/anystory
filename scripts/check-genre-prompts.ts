@@ -1,4 +1,4 @@
-import {getGenre, GENRES, SETTINGS, SETTINGS_LIST, settingVars} from "../src/prompts/index.js";
+import {getGenre, GENRES, SETTINGS, SETTINGS_LIST, settingVars, IDEA, FIDELITY} from "../src/prompts/index.js";
 import {MEMORY_CAPS} from "../src/utils.js";
 
 const fails: string[] = [];
@@ -174,6 +174,22 @@ must(d.HOOKFIX.includes("Mời quý vị cùng lắng nghe."), "drama HOOKFIX le
 must(!n.HOOKFIX.includes("Mời quý vị cùng lắng nghe."), "ngontinh HOOKFIX pastes the drama channel's closing line into a romance");
 must(n.HOOKFIX.includes('xưng "tôi"'), "ngontinh HOOKFIX no longer holds the heroine's first-person voice");
 must(!d.HOOKFIX.includes("nữ chính"), "drama HOOKFIX has picked up the romance spine's heroine");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ranh giới của tính năng "viết lại từ link YouTube". Bản ghi lời của video gốc chỉ được
+// phép có ĐÚNG MỘT người đọc là prompt IDEA. Nếu {{TRANSCRIPT}} lọt vào bất kỳ prompt nào
+// của spine, các stage viết văn sẽ nhìn thấy câu chữ của video gốc - lúc đó sản phẩm thôi
+// không còn là "cùng một cốt truyện" mà thành diễn đạt lại tác phẩm của người khác, đúng
+// thứ hệ thống bản quyền của YouTube bắt và thổi còi cả kênh. Đây là khẳng định biến lời
+// hứa đó thành thứ kiểm tra được.
+must(IDEA.includes("{{TRANSCRIPT}}"), "IDEA no longer receives the transcript it exists to read");
+must(IDEA.includes("{{FIDELITY}}"), "IDEA lost the fidelity slot, so every level renders the same prompt");
+for (const g of [d, n])
+  for (const name of NAMES)
+    must(!(g[name] as string).includes("{{TRANSCRIPT}}"),
+      `${g.id} ${name} carries {{TRANSCRIPT}} — the source video's wording must never reach a prompt that writes prose`);
+for (const level of ["loose", "frame", "tight"])
+  must((FIDELITY[level] ?? "").length > 40, `fidelity level "${level}" is missing or empty, so it silently falls back to loose`);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIXSPAN sửa từng đoạn thay vì cả chương, để thu nhỏ bán kính nổ của một lượt sửa. Nó

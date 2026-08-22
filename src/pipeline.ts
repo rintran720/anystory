@@ -1,4 +1,4 @@
-import fs from"node:fs/promises";import path from"node:path";import{askJSON,retryLLM,validateOutline,validateScenePlan}from"./ollama.js";import{P,getGenre,resolveSetting,settingVars}from"./prompts/index.js";import{exists,writeJSON,writeText,cleanGeneratedStory,dedupeMemoryArrays}from"./utils.js";import{measureProse,compareProse,proseFeedback}from"./quality.js";import{locateIssues,numberParagraphs,spliceParagraphs,untouchedRatio,paragraphsOf}from"./spans.js";import{badTopChapters,sanitizeTopChapters}from"./report.js";import type{ProseMetrics}from"./quality.js";import type{Config,ProgressEvent,RunUntil}from"./types.js";
+import fs from"node:fs/promises";import path from"node:path";import{askJSON,retryLLM,validateOutline,validateScenePlan}from"./ollama.js";import{P,IDEA,FIDELITY,getGenre,resolveSetting,settingVars}from"./prompts/index.js";import{fetchVideo,capTranscript}from"./youtube.js";import{exists,writeJSON,writeText,cleanGeneratedStory,dedupeMemoryArrays}from"./utils.js";import{measureProse,compareProse,proseFeedback}from"./quality.js";import{locateIssues,numberParagraphs,spliceParagraphs,untouchedRatio,paragraphsOf}from"./spans.js";import{badTopChapters,sanitizeTopChapters}from"./report.js";import type{ProseMetrics}from"./quality.js";import type{Config,ProgressEvent,RunUntil}from"./types.js";
 const scoreSum=(s:any):number=>Object.values(s??{}).reduce((a:number,b:any)=>a+(Number(b)||0),0);
 export const needsFix=(r:any):boolean=>!r.error&&(((r.issues??[]) as any[]).some(i=>i?.severity==="cao"||i?.severity==="vừa")||Object.values(r.scores??{}).some((v:any)=>Number(v)<=5));
 const usedModel=(c:Config):string=>c.provider==="deepseek"?c.deepseek.model:c.provider==="claude"?c.claude.model:c.model;
@@ -70,3 +70,13 @@ catch(e){if(capacityError(e))throw e;console.warn(`[FIX] ${label}: sửa theo đ
 async function summarize(ec:Config,prompt:string,valid:Set<number>):Promise<any>{let last:any=null;
 return await askJSON(ec,prompt,.2,2,(x:any)=>{last=x;const bad=badTopChapters(x,valid);if(bad.length)throw Error(`topIssues ghi số chương không có thật: ${[...new Set(bad)].join(", ")} (chương thật: ${[...valid].join(", ")})`)})
 .catch(e=>{if(capacityError(e))throw e;console.warn(`[REVIEW] tổng hợp vẫn ghi sai số chương sau khi thử lại (${e}); bỏ các số không có thật.`);return last?sanitizeTopChapters(last,valid):null})}
+
+// Bản ghi lời chỉ sống trong bộ nhớ của đúng lượt gọi này rồi biến mất: không ghi ra đĩa,
+// không vào thư mục truyện, không truyền tiếp cho stage nào khác. Thứ đi tiếp là đoạn ý
+// tưởng đã rút - và người dùng đọc, sửa được nó trước khi bấm chạy.
+export async function ideaFromYoutube(c:Config,url:string,fidelity:string):Promise<{idea:string;title:string;videoId:string;transcriptWords:number}>{
+const level=FIDELITY[fidelity]??FIDELITY.loose;
+const video=await fetchVideo(url,c.tts.pythonCommand);
+const idea=cleanGeneratedStory(await retryLLM(c,P(IDEA,{FIDELITY:level,TRANSCRIPT:capTranscript(video.transcript)}),{temperature:.4,think:false},2,"Ý tưởng từ YouTube")).trim();
+if(idea.length<60)throw Error(`ý tưởng rút ra quá ngắn (${idea.length} ký tự), có thể bản ghi không phải một truyện`);
+return{idea,title:video.title,videoId:video.videoId,transcriptWords:video.transcript.split(/\s+/).length}}

@@ -43,9 +43,43 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    document.getElementById("tab-paste").hidden = btn.dataset.tab !== "paste";
-    document.getElementById("tab-file").hidden = btn.dataset.tab !== "file";
+    // Duyệt mọi panel thay vì gọi tên từng cái: thêm tab mới mà quên sửa chỗ này thì tab
+    // cũ không bao giờ ẩn, và hai panel chồng lên nhau.
+    document.querySelectorAll(".tab-panel").forEach(pane => { pane.hidden = pane.id !== `tab-${btn.dataset.tab}`; });
   });
+});
+
+// Rút ý tưởng từ video rồi ĐỔ VÀO ô soạn thảo, không tạo truyện luôn. Người dùng phải đọc
+// được đúng thứ sắp dùng trước khi trả tiền cho một lượt sinh truyện đầy đủ.
+document.getElementById("btn-yt-fetch").addEventListener("click", async () => {
+  const url = document.getElementById("field-yt-url").value.trim();
+  const msg = document.getElementById("yt-message");
+  const btn = document.getElementById("btn-yt-fetch");
+  const show = (cls, text) => { msg.hidden = false; msg.className = cls; msg.textContent = text; };
+  if (!url) return show("error", "Dán link YouTube vào đã.");
+  btn.disabled = true;
+  show("hint", "Đang tải phụ đề và rút ý tưởng, việc này mất một lúc...");
+  try {
+    const res = await fetch("/api/idea-from-youtube", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, fidelity: document.getElementById("field-yt-fidelity").value })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    document.getElementById("field-idea").value = data.idea;
+    const nameField = document.getElementById("field-name");
+    // Tên truyện thành tên thư mục, nên bỏ những ký tự Windows không nhận. Chỉ điền khi ô
+    // còn trống - không giẫm lên tên người dùng đã tự đặt.
+    if (!nameField.value.trim() && data.title)
+      nameField.value = data.title.replace(/[\\/:*?"<>|]/g, "").trim().slice(0, 80);
+    document.querySelector('.tab-btn[data-tab="paste"]').click();
+    show("success", `Đã rút ý tưởng từ "${data.title || data.videoId}" (phụ đề ${data.transcriptWords} từ). Đọc lại và sửa ở tab Dán text trước khi tạo truyện.`);
+  } catch (err) {
+    show("error", String(err.message || err));
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 async function loadIdeaFiles() {

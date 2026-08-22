@@ -61,3 +61,31 @@ ${PROSE_EASY}
 QUY TẮC RIÊNG CỦA THỂ LOẠI:
 ${o.extras.map(e=>`- ${e}`).join("\n")}
 ${FIXSPAN_TAIL} ${o.refs}`;
+
+// Rút Ý TƯỞNG từ bản ghi lời một video, để pipeline viết một truyện MỚI từ đầu. Prompt này
+// là NGƯỜI ĐỌC DUY NHẤT của bản ghi lời: {{TRANSCRIPT}} không xuất hiện ở bất kỳ prompt nào
+// khác, nên SC/WR/EDIT không có đường nào nhìn thấy câu chữ của video gốc. Cùng một cốt
+// truyện thì hợp lệ, diễn đạt lại lời văn của người khác thì không - và cái sau cũng chính
+// là thứ hệ thống bản quyền của YouTube bắt được. check-genre-prompts.ts giữ khẳng định đó.
+// Genre-neutral có chủ ý: tiền đề không phụ thuộc thể loại, ARCH mới là chỗ áp thể loại.
+export const FIDELITY:Record<string,string>={
+loose:`Chỉ viết MỘT đoạn văn xuôi 60-100 chữ, nêu: nhân vật chính là ai, bị đẩy vào tình thế gì, xung đột cốt lõi là gì, và kết thúc theo hướng nào. KHÔNG liệt kê diễn biến, KHÔNG chia mục.`,
+frame:`Viết đúng bốn mục dưới đây, mỗi mục bắt đầu một dòng mới:
+TIỀN ĐỀ: một đoạn 60-100 chữ nêu nhân vật chính, tình thế và xung đột cốt lõi.
+NHÂN VẬT: 3-5 vai, mỗi vai một dòng, ghi vai trò và động cơ trong một câu.
+DIỄN BIẾN CHÍNH: 5-8 bước leo thang, mỗi bước một dòng, mỗi dòng nêu MỘT sự việc xảy ra.
+CÁI KẾT: 1-2 câu nói rõ chuyện kết thúc ra sao và ai phải trả giá.`,
+tight:`Viết đúng năm mục dưới đây, mỗi mục bắt đầu một dòng mới:
+TIỀN ĐỀ: một đoạn 60-100 chữ nêu nhân vật chính, tình thế và xung đột cốt lõi.
+NHÂN VẬT: 3-5 vai, mỗi vai một dòng, ghi vai trò và động cơ trong một câu.
+DIỄN BIẾN CHÍNH: 5-8 bước leo thang, mỗi bước một dòng, mỗi dòng nêu MỘT sự việc xảy ra.
+DIỄN BIẾN CHI TIẾT: 10-14 mốc theo đúng trình tự trong bản ghi, mỗi mốc một dòng, mỗi dòng một câu ngắn nêu SỰ VIỆC xảy ra.
+CÁI KẾT: 1-2 câu nói rõ chuyện kết thúc ra sao và ai phải trả giá.`};
+export const IDEA=`Đọc bản ghi lời của một truyện audio dưới đây và rút ra Ý TƯỞNG để người khác viết một truyện MỚI.
+THỨ BẠN LẤY là cốt truyện, tình thế và quan hệ nhân vật. THỨ BẠN BỎ LẠI là lời văn: TUYỆT ĐỐI KHÔNG chép câu nào trong bản ghi, KHÔNG trích dẫn, KHÔNG diễn đạt lại từng câu một. Lời văn sẽ do người khác viết mới hoàn toàn.
+KHÔNG dùng tên riêng xuất hiện trong bản ghi. Gọi nhân vật bằng vai (người mẹ, đứa con trai, cô con dâu, người quản lý) — truyện mới sẽ có dàn nhân vật và tên riêng của chính nó.
+Nếu bản ghi có câu chào kênh, lời cảm ơn, quảng cáo hay kêu gọi đăng ký, bỏ qua hết, chúng không thuộc về câu chuyện.
+{{FIDELITY}}
+Viết bằng tiếng Việt. OUTPUT là văn bản thuần, không Markdown, không tiêu đề, không "Dưới đây là", không lời bình về bản ghi.
+BẢN GHI LỜI:
+{{TRANSCRIPT}}`;

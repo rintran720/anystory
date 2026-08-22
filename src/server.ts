@@ -3,7 +3,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { EventEmitter } from "node:events";
 import { exists } from "./utils.js";
-import { generateStory, reviewStory, fixStory, needsFix, saveHook, rewriteHook } from "./pipeline.js";
+import { generateStory, reviewStory, fixStory, needsFix, saveHook, rewriteHook, ideaFromYoutube } from "./pipeline.js";
 import { runTTS, refTextFor, isVoiceFile, VOICES_DIR, DEFAULT_REF_AUDIO } from "./tts/index.js";
 import { config, loadSettingsOverrides } from "./config.js";
 import { GENRES, SETTINGS_LIST, getGenre, resolveSetting } from "./prompts/index.js";
@@ -668,6 +668,26 @@ app.get("/api/generate/stream", (req, res) => {
 // Dropdown giọng đọc lấy từ đĩa chứ không hardcode: thả một file mới vào voices/ là thấy
 // ngay, không phải sửa code. hasTranscript cho biết giọng nào đã có file lời đọc đi kèm -
 // giọng chưa có vẫn dùng được, chỉ là nhân bản kém chính xác hơn một chút.
+// Rút ý tưởng từ một video, KHÔNG tạo truyện. Kết quả đổ vào ô soạn thảo để người dùng
+// đọc và sửa trước khi bấm chạy - họ phải nhìn thấy đúng thứ sắp dùng, chứ không bấm một
+// cái rồi tin là máy rút đúng. Chạy thẳng chứ không xếp hàng: một lượt yt-dlp và một lượt
+// gọi model. Bản ghi lời không bao giờ chạm đĩa và không đi ra khỏi lượt gọi này.
+app.post("/api/idea-from-youtube", async (req, res) => {
+  const url = String(req.body?.url ?? "").trim();
+  if (!url) return res.status(400).json({ error: "thiếu link YouTube" });
+  const fidelity = String(req.body?.fidelity ?? "loose");
+  if (!["loose", "frame", "tight"].includes(fidelity)) {
+    return res.status(400).json({ error: `mức bám sát không hợp lệ: ${fidelity}` });
+  }
+  const c: Config = { ...config, ...(await loadSettingsOverrides()) };
+  try {
+    console.log(`[IDEA] rút ý tưởng từ ${url} (mức ${fidelity})`);
+    res.json(await ideaFromYoutube(c, url, fidelity));
+  } catch (err: any) {
+    res.status(400).json({ error: String(err?.message ?? err).replace(/^HET_KHA_NANG: /, "") });
+  }
+});
+
 app.get("/api/voices", async (req, res) => {
   const dir = path.resolve(VOICES_DIR);
   const names = (await fs.readdir(dir).catch(() => [])).filter(isVoiceFile).sort();

@@ -80,13 +80,27 @@
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="paste">Dán text</button>
       <button type="button" class="tab-btn" data-tab="file">Chọn file có sẵn</button>
+      <button type="button" class="tab-btn" data-tab="youtube">Từ link YouTube</button>
     </div>
+    <p id="yt-message" class="hint" hidden></p>
     <div id="tab-paste" class="tab-panel">
       <label>Ý tưởng (bỏ trống nếu truyện đã có Story Bible và bạn chỉ muốn tiếp tục) <textarea id="field-idea" rows="8"></textarea></label>
     </div>
     <div id="tab-file" class="tab-panel" hidden>
       <label>File có sẵn (giữ Ctrl/Shift để chọn nhiều) <select id="field-idea-file" multiple size="8"></select></label>
       <p id="file-selection-hint" class="hint" hidden></p>
+    </div>
+    <div id="tab-youtube" class="tab-panel" hidden>
+      <label>Link YouTube <input type="text" id="field-yt-url" placeholder="https://www.youtube.com/watch?v=..."></label>
+      <label>Mức bám sát bản gốc
+        <select id="field-yt-fidelity">
+          <option value="loose">Chỉ lấy ý — truyện ra khác hẳn, chung một ý</option>
+          <option value="frame">Bám khung — cùng hình dạng cốt truyện</option>
+          <option value="tight">Bám sát — theo trình tự sự kiện bản gốc</option>
+        </select>
+      </label>
+      <button type="button" id="btn-yt-fetch">Lấy ý tưởng từ video</button>
+      <p class="hint">Chỉ lấy cốt truyện và tình huống, không lấy lời văn — truyện vẫn được viết mới hoàn toàn từ đầu. Ý tưởng rút ra sẽ đổ sang tab <strong>Dán text</strong> để bạn đọc và sửa trước khi tạo.</p>
     </div>
 
     <fieldset>
