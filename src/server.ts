@@ -215,6 +215,7 @@ app.get("/api/settings", async (req, res) => {
     deepseekApiKeySet: Boolean((overrides.deepseek?.apiKey ?? config.deepseek.apiKey).trim()),
     claudeModel: overrides.claude?.model ?? config.claude.model,
     maxParallelStories: overrides.maxParallelStories ?? config.maxParallelStories,
+    maxRetries: overrides.maxRetries ?? config.maxRetries,
     autoFix: overrides.autoFix ?? config.autoFix,
     autoReview: overrides.autoReview ?? config.autoReview,
     editorModel: overrides.editorModel ?? config.editorModel
@@ -229,6 +230,7 @@ app.post("/api/settings", async (req, res) => {
 
   const current = await loadSettingsOverrides();
   const parallel = Number(req.body?.maxParallelStories);
+  const tries = Number(req.body?.maxRetries);
   const settings = {
     provider,
     ollamaModel: (ollamaModel && String(ollamaModel).trim()) || current.model || config.model,
@@ -238,6 +240,9 @@ app.post("/api/settings", async (req, res) => {
     maxParallelStories: Number.isFinite(parallel) && parallel >= 1
       ? Math.min(16, Math.floor(parallel))
       : current.maxParallelStories ?? config.maxParallelStories,
+    maxRetries: Number.isFinite(tries) && tries >= 1
+      ? Math.min(20, Math.floor(tries))
+      : current.maxRetries ?? config.maxRetries,
     autoFix: typeof req.body?.autoFix === "boolean"
       ? req.body.autoFix
       : current.autoFix ?? config.autoFix,

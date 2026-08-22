@@ -233,6 +233,7 @@ async function openSettings() {
     : "Chưa có key";
   document.getElementById("field-claude-model").value = data.claudeModel;
   document.getElementById("field-parallel").value = data.maxParallelStories;
+  document.getElementById("field-retries").value = data.maxRetries;
   document.getElementById("field-auto-review").checked = Boolean(data.autoReview);
   document.getElementById("field-auto-fix").checked = Boolean(data.autoFix);
   toggleProviderFields();
@@ -250,6 +251,7 @@ document.getElementById("settings-form").addEventListener("submit", async ev => 
     deepseekModel: document.getElementById("field-deepseek-model").value,
     claudeModel: document.getElementById("field-claude-model").value,
     maxParallelStories: document.getElementById("field-parallel").value || undefined,
+    maxRetries: document.getElementById("field-retries").value || undefined,
     autoFix: document.getElementById("field-auto-fix").checked,
     autoReview: document.getElementById("field-auto-review").checked,
     editorModel: document.getElementById("field-editor-model").value

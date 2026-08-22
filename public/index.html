@@ -172,6 +172,9 @@
     <label>Số truyện chạy song song <input type="number" id="field-parallel" min="1" max="16"></label>
     <p class="hint">Ollama local nên để 1 (model chạy tuần tự). DeepSeek/Claude có thể 3–8 tuỳ giới hạn tài khoản và RAM. Đổi số này áp dụng ngay, job đang chờ sẽ chạy tiếp.</p>
 
+    <label>Số lần thử lại mỗi bước <input type="number" id="field-retries" min="1" max="20"></label>
+    <p class="hint">Mặc định 3. Model local hay trả JSON sai định dạng hoặc thiếu chương thì nâng lên 8–10: mỗi bước sẽ gọi lại nhiều lần trước khi báo lỗi, nhiệt độ đổi qua lại từng lượt cho câu trả lời khác đi. Chỉ tốn thêm thời gian khi thật sự có lỗi, chạy trơn vẫn một lượt. Vài bước phụ (chấm điểm, rà continuity) luôn thử ít hơn một lượt.</p>
+
     <label>Model biên tập (chấm điểm + sửa chương) <select id="field-editor-model"></select></label>
     <p class="hint">Để trống là dùng luôn model viết truyện. Nên chọn model mạnh hơn model viết: model tự chấm bài của chính mình thường không thấy lỗi của mình. Chỉ đổi được model, vẫn chung nguồn LLM đã chọn ở trên (Ollama thì đặt <code>editorModel</code> trong <code>settings.json</code> hoặc biến môi trường <code>EDITOR_MODEL</code>).</p>
 
