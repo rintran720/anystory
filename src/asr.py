@@ -6,7 +6,31 @@ Chạy bởi src/youtube.ts qua YT_PYTHON. Tách thành file riêng chứ không
 Bản ghi này KHÔNG BAO GIỜ được ghi vào thư mục truyện: nó đi thẳng vào prompt IDEA
 rồi biến mất cùng thư mục tạm, đúng như bản ghi lấy từ phụ đề.
 """
-import argparse, sys
+import argparse, glob, itertools, os, sys, sysconfig
+
+# Trên Windows, ctranslate2 không tự tìm được cuBLAS/cuDNN dù chúng đã được cài bằng pip:
+# các wheel nvidia-* đặt DLL trong site-packages/nvidia/*/bin, chỗ mà Windows không dò tới.
+# PyTorch tự nạp phần này nên torch chạy GPU bình thường, và chính điều đó làm sự cố khó
+# đoán - máy có GPU, có driver, có cả DLL, mà ctranslate2 vẫn chết ở "cublas64_12.dll is
+# not found". Khai báo thư mục ngay tại đây, TRƯỚC khi import faster_whisper, thay vì bắt
+# người dùng sửa PATH của cả máy cho một tiến trình con.
+def _add_cuda_dll_dirs() -> int:
+    if not hasattr(os, "add_dll_directory"):
+        return 0
+    root = os.path.join(sysconfig.get_paths()["purelib"], "nvidia")
+    found = 0
+    for d in sorted({os.path.dirname(f) for f in glob.glob(os.path.join(root, "**", "*.dll"), recursive=True)}):
+        try:
+            os.add_dll_directory(d)
+        except OSError:
+            pass
+        # add_dll_directory một mình KHÔNG đủ, và đây là chỗ dễ tưởng đã xong: nó chỉ có tác
+        # dụng với LoadLibraryEx dùng cờ tìm kiếm mới, còn ctranslate2 nạp cuBLAS bằng
+        # LoadLibrary trần - thứ duy nhất nó nhìn là PATH. Đã thử: khai báo 3 thư mục xong
+        # vẫn chết y nguyên. Phải làm cả hai, và PATH này chỉ sống trong tiến trình con.
+        os.environ["PATH"] = d + os.pathsep + os.environ.get("PATH", "")
+        found += 1
+    return found
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -19,6 +43,7 @@ def main() -> int:
     # thành rác và người đọc log không biết chuyện gì đang xảy ra.
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
+    print(f"[asr] cuda dll dirs: {_add_cuda_dll_dirs()}", file=sys.stderr, flush=True)
     try:
         from faster_whisper import WhisperModel
     except ImportError:
@@ -58,7 +83,11 @@ def main() -> int:
 
     print(f"[asr] duration={info.duration:.0f}s", file=sys.stderr, flush=True)
     parts, nudge = [], 0.0
-    for seg in ([first] if first else []) + list(rest):
+    # KHÔNG dùng `[first] + list(rest)`: list() vắt cạn generator TRƯỚC khi thân vòng lặp
+    # chạy lần nào, nên toàn bộ việc giải mã diễn ra im lặng rồi mọi dòng tiến trình mới in
+    # ra một loạt ở cuối. Đo trên video 47 phút: cả 46 dòng cùng đóng dấu giây thứ 96. Một
+    # thanh tiến trình chỉ xuất hiện khi đã xong thì tệ hơn là không có, vì nó nói dối.
+    for seg in itertools.chain([first] if first else [], rest):
         text = seg.text.strip()
         if text:
             parts.append(text)
