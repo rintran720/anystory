@@ -13,7 +13,7 @@ const VARS: Record<string, string> = {
   DRAFT: "<DRAFT>", STORY: "<STORY>", TEXT: "<TEXT>", TOTAL: "6", ISSUES: "<ISSUES>",
   HOOK: "<HOOK>", FEEDBACK: "<FEEDBACK>", INDEXES: "<INDEXES>",
   SET_NAMES: "<SET_NAMES>", SET_DETAIL: "<SET_DETAIL>", SET_PROP: "<SET_PROP>",
-  SET_PROVERB: "<SET_PROVERB>", SET_FOREIGN: "<SET_FOREIGN>"
+  SET_PROVERB: "<SET_PROVERB>", SET_FOREIGN: "<SET_FOREIGN>", SET_JUDGE: "<SET_JUDGE>"
 };
 
 const g = getGenre(process.argv[2] ?? "drama");

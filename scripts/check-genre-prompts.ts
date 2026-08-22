@@ -129,11 +129,13 @@ must(n.OUT.includes("signatureLine"), "ngontinh asks ARCH for signatureLine but 
 // Bảng dưới là bảng ĐẦY ĐỦ: biến nào phải nằm ở prompt nào, và không được nằm chỗ khác.
 const SET_SLOTS: Record<string, Record<string, string>> = {
   // Ngôn tình cố ý KHÔNG có {{SET_PROVERB}}: HOOK của nó cấm mở bằng tục ngữ.
-  drama: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", HOOK: "{{SET_PROVERB}}", FIXCH: "{{SET_FOREIGN}}"},
-  ngontinh: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", FIXCH: "{{SET_FOREIGN}}"}
+  // {{SET_JUDGE}} là biến DUY NHẤT nằm ở nhiều prompt: cả ba prompt chấm điểm đều phải
+  // biết đang đọc thế giới nào, nếu không chúng chấm truyện Trung Quốc theo chuẩn Việt.
+  drama: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", HOOK: "{{SET_PROVERB}}", FIXCH: "{{SET_FOREIGN}}", REVIEW_CH: "{{SET_JUDGE}}", REVIEW_SUM: "{{SET_JUDGE}}", CHECK: "{{SET_JUDGE}}"},
+  ngontinh: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", FIXCH: "{{SET_FOREIGN}}", REVIEW_CH: "{{SET_JUDGE}}", REVIEW_SUM: "{{SET_JUDGE}}", CHECK: "{{SET_JUDGE}}"}
 };
 const SET_VARS = new Set(Object.keys(settingVars("vietnam")).map(k => `{{${k}}}`));
-must(SET_VARS.size === 5, `settingVars fills ${SET_VARS.size} variables, the prompts are written against 5`);
+must(SET_VARS.size === 6, `settingVars fills ${SET_VARS.size} variables, the prompts are written against 6`);
 for (const g of [d, n]) {
   const slots = SET_SLOTS[g.id];
   for (const [p, v] of Object.entries(slots))
@@ -207,6 +209,20 @@ for (const [id, pack] of Object.entries(SETTINGS)) {
 // Mệnh đề foreign của Trung Quốc phải là mệnh đề ĐẢO, không phải bản sao của Việt Nam.
 must(SETTINGS.china.foreign !== SETTINGS.vietnam.foreign, "china foreign clause is a copy of vietnam's — the fix pass will delete the Han-Viet cast");
 must(SETTINGS.china.foreign.includes("GIỮ NGUYÊN"), "china foreign clause no longer orders the editor to KEEP the Han-Viet names");
+
+// `judge` là `foreign` của tầng chấm điểm, và hỏng theo đúng kiểu ấy. Không có nó, prompt
+// chấm chỉ đọc thấy "tiếng Việt" rồi ghi lỗi "thoại thiếu tự nhiên so với tâm lý người
+// Việt" cho một truyện đặt ở Trung Quốc — rồi lượt sửa sau đọc chính lời phê đó làm chỉ
+// thị và kéo truyện về Việt Nam. Sai lặng lẽ: báo cáo vẫn đẹp, điểm vẫn có, chỉ là chấm
+// nhầm thế giới.
+must(SETTINGS.china.judge !== SETTINGS.vietnam.judge, "china judge clause is a copy of vietnam's — a Chinese-set story will be marked down for not being Vietnamese");
+must(SETTINGS.china.judge.includes("KHÔNG trừ điểm"), "china judge clause no longer forbids docking points for un-Vietnamese behaviour");
+must(SETTINGS.vietnam.judge.includes("Việt Nam"), "vietnam judge clause no longer names its own setting");
+for (const g of [d, n]) {
+  must(!g.REVIEW_CH.includes("người Việt"), `${g.id} REVIEW_CH hardcodes "người Việt" — it will judge every setting by Vietnamese manners`);
+  must(!g.REVIEW_SUM.includes("người Việt"), `${g.id} REVIEW_SUM hardcodes "người Việt"`);
+  must(!g.CHECK.includes("người Việt"), `${g.id} CHECK hardcodes "người Việt"`);
+}
 
 // Danh sách chống lặp của mỗi thể loại phải có trần trong dedupeMemoryArrays, nếu không
 // nó lớn mãi và được nhét nguyên vào MEMORY của mọi prompt về sau.

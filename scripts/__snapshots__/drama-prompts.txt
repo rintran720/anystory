@@ -148,13 +148,17 @@ DRAFT:
 <DRAFT>
 
 ########## CHECK ##########
-Rà soát continuity của truyện tiếng Việt dưới đây. Chỉ JSON {"issues":[{"type":"","severity":"cao|vừa|thấp","detail":"","suggestion":""}],"unresolvedThreads":[],"verdict":""}. type chọn trong: timeline, dây thừa, lặp ý, nhân vật phẳng, leo thang trùng lặp, mâu thuẫn, số liệu lệch, báo trước lạm dụng, cold open không trả bài. Tìm: con số tuổi hoặc mốc thời gian mâu thuẫn nhau; tình tiết gài ra rồi bỏ quên không nhắc lại; kết luận cảm xúc lặp quá 2 lần; nhân vật chỉ xuất hiện để làm nền mà không có mục đích riêng; hai lần leo thang dùng cùng một cơ chế; con số tiền bạc nêu lại khác với ledger trong BIBLE; câu báo trước dạng "không biết đó là lần cuối" dùng quá 6 lần trong cả truyện hoặc quá 1 lần trong cùng một cảnh; cảnh tai họa hứa ở coldOpen không hề xảy ra trong truyện hoặc xảy ra khác hẳn. Không bịa lỗi, nếu sạch thì trả mảng rỗng. Không Markdown. BIBLE:
+Rà soát continuity của truyện tiếng Việt dưới đây.
+BỐI CẢNH TRUYỆN: <SET_JUDGE>
+Chỉ JSON {"issues":[{"type":"","severity":"cao|vừa|thấp","detail":"","suggestion":""}],"unresolvedThreads":[],"verdict":""}. type chọn trong: timeline, dây thừa, lặp ý, nhân vật phẳng, leo thang trùng lặp, mâu thuẫn, số liệu lệch, báo trước lạm dụng, cold open không trả bài. Tìm: con số tuổi hoặc mốc thời gian mâu thuẫn nhau; tình tiết gài ra rồi bỏ quên không nhắc lại; kết luận cảm xúc lặp quá 2 lần; nhân vật chỉ xuất hiện để làm nền mà không có mục đích riêng; hai lần leo thang dùng cùng một cơ chế; con số tiền bạc nêu lại khác với ledger trong BIBLE; câu báo trước dạng "không biết đó là lần cuối" dùng quá 6 lần trong cả truyện hoặc quá 1 lần trong cùng một cảnh; cảnh tai họa hứa ở coldOpen không hề xảy ra trong truyện hoặc xảy ra khác hẳn. Không bịa lỗi, nếu sạch thì trả mảng rỗng. Không Markdown. BIBLE:
 <BIBLE>
 TRUYỆN:
 <STORY>
 
 ########## REVIEW_CH ##########
-Chấm điểm biên tập MỘT CHƯƠNG truyện drama tiếng Việt dạng audio kể chuyện. Chỉ JSON, không Markdown:
+Chấm điểm biên tập MỘT CHƯƠNG truyện drama tiếng Việt dạng audio kể chuyện.
+BỐI CẢNH TRUYỆN: <SET_JUDGE>
+Chỉ JSON, không Markdown:
 {"chapter":0,"scores":{"hook":0,"nhipDo":0,"showKhongTell":0,"hoiThoai":0,"cangThang":0,"nhanVat":0},"issues":[{"severity":"cao|vừa|thấp","detail":"","suggestion":""}],"strengths":[""]}
 "scores" chỉ được chứa đúng 6 khóa nêu trên, không thêm khóa nào khác.
 THANG ĐIỂM 0-10: 0-4 hỏng, phải viết lại; 5-6 tạm đọc được nhưng nhạt; 7 đạt chuẩn nghe được; 8 tốt; 9-10 chỉ dành cho đoạn thật sự xuất sắc, rất hiếm khi cho. Chấm thẳng tay, đừng nới điểm. Nếu có issue severity "cao" thì tiêu chí liên quan không được quá 6.
@@ -162,7 +166,7 @@ TỪNG TIÊU CHÍ:
 - hook: ba câu đầu có giữ được người nghe không; câu cuối chương có phải một sự kiện vật lý hoặc một câu thoại đúng như cliffhanger trong OUTLINE, chứ không phải câu hỏi tu từ.
 - nhipDo: có đoạn nào lê thê, kể lại điều người nghe đã biết; hoặc ngược lại dồn quá nhanh làm mất sức nặng của tình tiết.
 - showKhongTell: cảm xúc dựng bằng hành động, đồ vật, chi tiết cụ thể hay bị người kể nói toạc ra và giảng giải.
-- hoiThoai: thoại có tự nhiên như người Việt nói không; xưng hô có khớp nhiệt độ quan hệ không; có nhân vật nào nói năng như đang đọc văn viết không.
+- hoiThoai: thoại có tự nhiên như người thật nói không, đúng với bối cảnh nêu trên; xưng hô có khớp nhiệt độ quan hệ không; có nhân vật nào nói năng như đang đọc văn viết không.
 - cangThang: áp lực cuối chương có thật sự cao hơn đầu chương không, có đúng pressureLevel và escalationType của OUTLINE không, cơ chế leo thang có trùng chương khác không.
 - nhanVat: nhân vật có động cơ riêng và hành động chủ động hay chỉ đứng làm nền; phản diện có lý lẽ của mình không.
 ĐỐI CHIẾU OUTLINE: nếu chương thiếu dramaticIrony, thiếu antagonistInsert là đoạn cắt sang phản diện làm việc trong bí mật, hoặc protagonistAction không hề xảy ra, thì ghi thành issue.
@@ -175,7 +179,9 @@ NỘI DUNG CHƯƠNG:
 <TEXT>
 
 ########## REVIEW_SUM ##########
-Tổng hợp đánh giá toàn bộ truyện drama tiếng Việt dựa trên bảng điểm từng chương. Truyện có tổng cộng 6 chương và ĐÃ VIẾT XONG. Nếu bảng điểm dưới đây thiếu một vài chương thì đó là do lỗi kỹ thuật lúc chấm, không phải truyện viết thiếu: cứ đánh giá trên các chương có sẵn, không hạ điểm và không kết luận truyện dang dở vì lý do đó. Chỉ JSON, không Markdown:
+Tổng hợp đánh giá toàn bộ truyện drama tiếng Việt dựa trên bảng điểm từng chương.
+BỐI CẢNH TRUYỆN: <SET_JUDGE>
+Truyện có tổng cộng 6 chương và ĐÃ VIẾT XONG. Nếu bảng điểm dưới đây thiếu một vài chương thì đó là do lỗi kỹ thuật lúc chấm, không phải truyện viết thiếu: cứ đánh giá trên các chương có sẵn, không hạ điểm và không kết luận truyện dang dở vì lý do đó. Chỉ JSON, không Markdown:
 {"scores":{"cauTruc":0,"vongCungNhanVat":0,"caoTrao":0,"ketThuc":0,"doMoiLa":0,"bamMoralMotif":0},"overall":0,"topIssues":[{"severity":"cao|vừa|thấp","chapters":[0],"detail":"","suggestion":""}],"verdict":""}
 "scores" chỉ được chứa đúng 6 khóa nêu trên, không thêm khóa nào khác.
 THANG ĐIỂM 0-10 như chấm chương: 7 là đạt chuẩn nghe được, 9-10 rất hiếm khi cho.
