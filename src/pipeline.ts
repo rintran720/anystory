@@ -74,9 +74,9 @@ return await askJSON(ec,prompt,.2,2,(x:any)=>{last=x;const bad=badTopChapters(x,
 // Bản ghi lời chỉ sống trong bộ nhớ của đúng lượt gọi này rồi biến mất: không ghi ra đĩa,
 // không vào thư mục truyện, không truyền tiếp cho stage nào khác. Thứ đi tiếp là đoạn ý
 // tưởng đã rút - và người dùng đọc, sửa được nó trước khi bấm chạy.
-export async function ideaFromYoutube(c:Config,url:string,fidelity:string):Promise<{idea:string;title:string;videoId:string;transcriptWords:number}>{
+export async function ideaFromYoutube(c:Config,url:string,fidelity:string):Promise<{idea:string;title:string;videoId:string;transcriptWords:number;source:string}>{
 const level=FIDELITY[fidelity]??FIDELITY.loose;
-const video=await fetchVideo(url,c.tts.pythonCommand);
+const video=await fetchVideo(url,c.ytPython);
 const idea=cleanGeneratedStory(await retryLLM(c,P(IDEA,{FIDELITY:level,TRANSCRIPT:capTranscript(video.transcript)}),{temperature:.4,think:false},2,"Ý tưởng từ YouTube")).trim();
 if(idea.length<60)throw Error(`ý tưởng rút ra quá ngắn (${idea.length} ký tự), có thể bản ghi không phải một truyện`);
-return{idea,title:video.title,videoId:video.videoId,transcriptWords:video.transcript.split(/\s+/).length}}
+return{idea,title:video.title,videoId:video.videoId,transcriptWords:video.transcript.split(/\s+/).length,source:video.source}}

@@ -5,7 +5,7 @@
 // mới) và từng chữ bọc trong thẻ thời gian. Trên file thật, bộ phân tích này rút 502.594 ký
 // tự VTT xuống 50.139 ký tự văn xuôi, không còn thẻ nào và không còn câu lặp liền kề nào
 // trong 785 câu. Không chép nội dung video vào đây làm mẫu: định dạng mới là thứ cần test.
-import { parseVtt, capTranscript, isYoutubeUrl, TRANSCRIPT_CAP } from "../src/youtube.js";
+import { parseVtt, capTranscript, isYoutubeUrl, TRANSCRIPT_CAP, classifyYtdlp, explainYtdlp, joinAsrSegments } from "../src/youtube.js";
 
 let failed = 0;
 const must = (cond: boolean, msg: string) => { if (!cond) { console.error(`FAIL ${msg}`); failed++; } };
@@ -73,6 +73,29 @@ for (const ok of ["https://www.youtube.com/watch?v=0vAvNT14Fkw", "https://youtu.
 for (const bad of ["-x", "--exec=calc.exe", "https://example.com/watch?v=1", "file:///etc/passwd",
                    "https://youtube.evil.com/watch?v=1", "not a url", ""])
   must(!isYoutubeUrl(bad), `accepted something that is not a YouTube link: ${JSON.stringify(bad)}`);
+
+// -- Phan loai that bai cua yt-dlp -------------------------------------------
+// Day la khang dinh nang nhat cua phan Whisper, va no la khang dinh AM: mot loi CAI DAT
+// tuyet doi khong duoc bao thanh "video khong co phu de". Loi do da xay ra that - .venv
+// khong co yt_dlp nen moi video deu bao la khong co phu de, va nguoi dung ket luan minh
+// can Whisper trong khi thu can la mot lenh pip. Chan doan sai con te hon khong chan doan.
+must(classifyYtdlp(1, "No module named yt_dlp") === "missing-tool", "a missing yt-dlp was not recognised as a broken install");
+must(classifyYtdlp(-1, "spawn ENOENT") === "missing-tool", "a failed spawn was not recognised as a broken install");
+must(classifyYtdlp(1, "ERROR: HTTP Error 429: Too Many Requests") === "blocked", "a 429 was not recognised as throttling");
+must(classifyYtdlp(1, "ERROR: Private video. Sign in") === "private", "a private video was not recognised");
+must(classifyYtdlp(1, "ERROR: Video unavailable") === "gone", "a removed video was not recognised");
+// Chi ĐUNG nhanh nay duoc di tiep sang Whisper. Moi nhanh tren deu can chinh yt-dlp de tai
+// audio ve, nen chay Whisper sau chung chi la that bai lan thu hai, cham hon.
+must(classifyYtdlp(0, "") === "no-subs", "a clean run with no captions must be the only path to Whisper");
+must(classifyYtdlp(1, "WARNING: no subtitles found") === "no-subs", "a plain no-subtitles run must reach Whisper");
+must(explainYtdlp("missing-tool", "py.exe", 1).includes("pip install yt-dlp"), "the missing-tool message does not say how to fix it");
+must(explainYtdlp("missing-tool", "py.exe", 1).includes("py.exe"), "the missing-tool message does not name the interpreter it tried");
+must(!explainYtdlp("missing-tool", "py.exe", 1).includes("phu de"), "the missing-tool message still blames the video for having no captions");
+
+// -- Noi cac doan Whisper ----------------------------------------------------
+must(joinAsrSegments([" Ba ngoi xuong. ", "", "  Troi chua sang han. "]) === "Ba ngoi xuong. Troi chua sang han.",
+  "ASR segments were not joined into clean prose");
+must(joinAsrSegments([]) === "", "an empty segment list did not produce an empty transcript");
 
 if (failed) { console.error(`\n${failed} youtube assertion(s) failed`); process.exit(1); }
 console.log("youtube transcript parse/cap/url-guard OK");

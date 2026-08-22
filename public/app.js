@@ -58,7 +58,7 @@ document.getElementById("btn-yt-fetch").addEventListener("click", async () => {
   const show = (cls, text) => { msg.hidden = false; msg.className = cls; msg.textContent = text; };
   if (!url) return show("error", "Dán link YouTube vào đã.");
   btn.disabled = true;
-  show("hint", "Đang tải phụ đề và rút ý tưởng, việc này mất một lúc...");
+  show("hint", "Đang lấy bản ghi lời và rút ý tưởng. Video không có phụ đề thì phải nghe lại bằng Whisper, có thể mất vài phút...");
   try {
     const res = await fetch("/api/idea-from-youtube", {
       method: "POST",
@@ -74,7 +74,11 @@ document.getElementById("btn-yt-fetch").addEventListener("click", async () => {
     if (!nameField.value.trim() && data.title)
       nameField.value = data.title.replace(/[\\/:*?"<>|]/g, "").trim().slice(0, 80);
     document.querySelector('.tab-btn[data-tab="paste"]').click();
-    show("success", `Đã rút ý tưởng từ "${data.title || data.videoId}" (phụ đề ${data.transcriptWords} từ). Đọc lại và sửa ở tab Dán text trước khi tạo truyện.`);
+    // Nói rõ bản ghi lấy từ đâu: phụ đề là chữ do người/máy YouTube ghi sẵn, còn Whisper là
+    // máy nghe lại từ tiếng nói, sai sót khác hẳn nhau - người đọc ý tưởng cần biết mình
+    // đang soi lại bản nào.
+    const nguon = data.source === "whisper" ? "nghe bằng Whisper" : "phụ đề";
+    show("success", `Đã rút ý tưởng từ "${data.title || data.videoId}" (${nguon}, ${data.transcriptWords} từ). Đọc lại và sửa ở tab Dán text trước khi tạo truyện.`);
   } catch (err) {
     show("error", String(err.message || err));
   } finally {
