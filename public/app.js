@@ -140,6 +140,19 @@ async function openCreateForm(prefillName) {
   const genreSelect = document.getElementById("field-genre");
   genreSelect.innerHTML = (defaults.genres ?? []).map(g => `<option value="${g.id}">${g.label}</option>`).join("");
   genreSelect.value = defaults.genre ?? "drama";
+  // Thể loại nào tự khai hình dạng truyện của nó (hồi quy: 33 phút, 4 chương, 4 cảnh) thì đổi
+  // dropdown là ba ô số nhảy theo. Không làm việc này thì người dùng chọn thể loại đo theo dải
+  // 8.000 từ nhưng vẫn gửi lên 60 phút, và truyện ra đời đã lệch chuẩn trước khi viết chữ nào.
+  // Vẫn sửa tay đè lên được: đây là giá trị gợi ý, không phải khoá.
+  const applyGenreShape = () => {
+    const shape = (defaults.genres ?? []).find(g => g.id === genreSelect.value)?.defaults;
+    if (!shape) return;
+    document.getElementById("field-duration").value = shape.durationMinutes;
+    document.getElementById("field-chapters").value = shape.chapters;
+    document.getElementById("field-scenes").value = shape.scenesPerChapter;
+  };
+  genreSelect.onchange = applyGenreShape;
+  applyGenreShape();
 
   const settingSelect = document.getElementById("field-setting");
   settingSelect.innerHTML = (defaults.settings ?? []).map(s => `<option value="${s.id}">${s.label}</option>`).join("");
@@ -722,7 +735,7 @@ document.getElementById("btn-view-review").addEventListener("click", () => {
   openReview(state.currentStoryName);
 });
 
-const GENRE_LABELS = { drama: "Drama gia đình", ngontinh: "Ngôn tình sủng" };
+const GENRE_LABELS = { drama: "Drama gia đình", ngontinh: "Ngôn tình sủng", hoiquy: "Hồi quy báo thù" };
 const SETTING_LABELS = { vietnam: "Việt Nam", china: "Trung Quốc" };
 
 // Hai trường hợp khác hẳn nhau: KHÔNG có dấu (truyện đời cũ, đúng là drama/Việt Nam) và
@@ -780,6 +793,46 @@ async function openReview(name) {
   show("view-review");
 }
 
+// Khung đo được (src/craft.ts). Báo cáo cũ không có trường này, và đó là trạng thái hợp lệ:
+// nói thẳng "chưa đo" thay vì hiện một bảng rỗng trông như truyện không lỗi gì.
+function renderCraft(craft) {
+  const el = document.getElementById("review-craft");
+  el.innerHTML = "";
+  if (!craft) {
+    el.innerHTML = '<p class="hint">Báo cáo này chưa có số đo khung — chấm điểm lại để có.</p>';
+    return;
+  }
+  const chips = document.createElement("div");
+  chips.className = "score-chips";
+  for (const note of craft.notes ?? []) {
+    const chip = document.createElement("span");
+    chip.className = "score-chip";
+    chip.textContent = note;
+    chips.appendChild(chip);
+  }
+  el.appendChild(chips);
+  if (craft.partial) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "Truyện mới viết được một phần, mục tiêu độ dài đã co lại theo số chương đã có.";
+    el.appendChild(p);
+  }
+  const list = document.createElement("ul");
+  for (const v of craft.violations ?? []) {
+    const li = document.createElement("li");
+    li.textContent = v;
+    list.appendChild(li);
+  }
+  if (!list.children.length) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "Nằm trọn trong dải chuẩn.";
+    el.appendChild(p);
+  } else {
+    el.appendChild(list);
+  }
+}
+
 function renderReview(name, review, fixReport, staleChapters = []) {
   const stale = new Set(staleChapters);
   document.getElementById("review-title").textContent = `Báo cáo review — ${name}`;
@@ -810,6 +863,8 @@ function renderReview(name, review, fixReport, staleChapters = []) {
   for (const issue of summary?.topIssues ?? [])
     issuesEl.appendChild(issueCard(issue, (issue.chapters ?? []).filter(n => realChapters.has(Number(n)))));
   if (!issuesEl.children.length) issuesEl.innerHTML = '<p class="hint">Không có lỗi nào được nêu.</p>';
+
+  renderCraft(review?.craft);
 
   const fixByChapter = new Map((fixReport?.fixes ?? []).map(f => [f.chapter, f]));
   const keys = reportCriteriaKeys(review);

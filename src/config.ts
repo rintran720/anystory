@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import type {Config,GenreId,SettingId} from "./types.js";
-const asGenre=(v:any):GenreId|null=>v==="drama"||v==="ngontinh"?v:null;
+const asGenre=(v:any):GenreId|null=>v==="drama"||v==="ngontinh"||v==="hoiquy"?v:null;
 const clampRetries=(v:any):number|null=>{const n=Number(v);return Number.isFinite(n)&&n>=1?Math.min(20,Math.floor(n)):null};
 const asSetting=(v:any):SettingId|"auto"|null=>v==="vietnam"||v==="china"||v==="auto"?v:null;
 export const config:Config={model:process.env.OLLAMA_MODEL??"qwen3.5:9b",language:"vi",genre:asGenre(process.env.STORY_GENRE)??"drama",setting:asSetting(process.env.STORY_SETTING)??"auto",durationMinutes:60,targetWordsPerMinute:240,chapters:6,scenesPerChapter:5,numCtx:Number(process.env.OLLAMA_NUM_CTX??32768),maxRetries:clampRetries(process.env.LLM_RETRIES)??3,temperature:.7,ollamaUrl:process.env.OLLAMA_URL??"http://localhost:11434/api/chat",provider:"ollama",maxParallelStories:Math.max(1,Number(process.env.MAX_PARALLEL_STORIES??3)),autoFix:process.env.AUTO_FIX==="1",autoReview:process.env.AUTO_REVIEW==="1",editorModel:process.env.EDITOR_MODEL??"",deepseek:{apiKey:process.env.DEEPSEEK_API_KEY??"",model:process.env.DEEPSEEK_MODEL??"deepseek-v4-flash"},claude:{model:process.env.CLAUDE_MODEL??"sonnet"},ytPython:process.env.YT_PYTHON??"python",tts:{pythonCommand:process.env.PYTHON_COMMAND??"python",voice:process.env.TTS_VOICE??"Ly",silenceGapMs:Number(process.env.TTS_SILENCE_GAP_MS??500)}};

@@ -23,4 +23,4 @@ ISSUES CẦN SỬA:
 {{ISSUES}}
 CHƯƠNG ĐÃ ĐÁNH SỐ ĐOẠN:
 {{TEXT}}`});
-export const DRAMA:GenrePrompts={id:"drama",label:"Drama gia đình / quả báo",defaultSetting:"vietnam",ARCH,OUT,SC,WR,HOOK,HOOKFIX,FIXSPAN,OUTRO,MEM,EDIT,CHECK,REVIEW_CH,REVIEW_SUM,FIXCH,FIXVERIFY,hookWords:260,outroWords:450,bibleRequired:["title","genre","theme","premise","tone","characters","setting","mainConflict","secondaryConflicts","ending","moral","motif","escalationLadder"],chapterCriteria:["hook","nhipDo","showKhongTell","hoiThoai","cangThang","nhanVat"],usedMemoryKeys:["usedEmotionalBeats","usedEscalationTypes"],actsText};
+export const DRAMA:GenrePrompts={narration:"third",id:"drama",label:"Drama gia đình / quả báo",defaultSetting:"vietnam",ARCH,OUT,SC,WR,HOOK,HOOKFIX,FIXSPAN,OUTRO,MEM,EDIT,CHECK,REVIEW_CH,REVIEW_SUM,FIXCH,FIXVERIFY,hookWords:260,outroWords:450,bibleRequired:["title","genre","theme","premise","tone","characters","setting","mainConflict","secondaryConflicts","ending","moral","motif","escalationLadder"],chapterCriteria:["hook","nhipDo","showKhongTell","hoiThoai","cangThang","nhanVat"],usedMemoryKeys:["usedEmotionalBeats","usedEscalationTypes"],actsText};

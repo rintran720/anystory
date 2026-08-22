@@ -6,10 +6,12 @@ const must = (cond: boolean, msg: string) => { if (!cond) fails.push(msg); };
 
 const d = getGenre("drama");
 const n = getGenre("ngontinh");
+const h = getGenre("hoiquy");
 
 // Thể loại phải phân giải đúng, không âm thầm rơi về drama
 must(n.id === "ngontinh", "getGenre('ngontinh') fell back to drama — spine not registered");
-must(GENRES.map(g => g.id).sort().join(",") === "drama,ngontinh", "GENRES does not list exactly the two genres");
+must(GENRES.map(g => g.id).sort().join(",") === "drama,hoiquy,ngontinh", "GENRES does not list exactly the three genres");
+must(h.id === "hoiquy", "getGenre('hoiquy') fell back to drama — spine not registered");
 
 // Fallback an toàn cho truyện cũ và giá trị rác
 for (const bad of [undefined, null, "", "khong-ton-tai", 123, {}])
@@ -38,7 +40,7 @@ must(!n.SC.includes("mày-tao"), "ngontinh SC still offers the may-tao register"
 // Khóa điểm phải khớp giữa khai báo và prompt
 must(d.chapterCriteria.join(",") === "hook,nhipDo,showKhongTell,hoiThoai,cangThang,nhanVat", "drama chapterCriteria changed");
 must(n.chapterCriteria.join(",") === "hook,nhipDo,showKhongTell,hoiThoai,ngotNgao,namChinh", "ngontinh chapterCriteria wrong");
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   for (const k of g.chapterCriteria)
     must(g.REVIEW_CH.includes(`"${k}"`), `${g.id} REVIEW_CH prompt does not declare the key ${k}`);
   for (const k of ["cauTruc", "vongCungNhanVat", "caoTrao", "ketThuc", "doMoiLa", "bamMoralMotif"])
@@ -53,7 +55,7 @@ for (const g of [d, n]) {
 // Bối cảnh là một trục riêng: spine chọn mặc định, và không được tự viết bối cảnh vào prompt
 must(n.defaultSetting === "china", "ngontinh defaultSetting must be china — the reference story is Chinese-set");
 must(d.defaultSetting === "vietnam", "drama defaultSetting must stay vietnam");
-for (const g of [d, n])
+for (const g of [d, n, h])
   for (const p of ["ARCH", "SC", "WR", "FIXCH"] as const)
     must(!(g[p] as string).includes("Việt Nam"), `${g.id} ${p} hardcodes "Việt Nam" — the setting pack owns that now`);
 
@@ -80,7 +82,7 @@ for (const r of ["CÂU BÁO TRƯỚC:", "DƯ LUẬN:"]) {
 }
 
 // Quy tắc 2 trỏ tới một quy tắc khác BẰNG SỐ; số đó phải trỏ đúng chỗ
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   const m = /Ngoại lệ DUY NHẤT là (.+?) ở quy tắc (\d+)\./.exec(g.WR);
   must(!!m, `${g.id} WR rule 2 no longer names its exception rule by number`);
   if (m) {
@@ -96,7 +98,7 @@ for (const g of [d, n]) {
 // mới phải gọi đích danh luật kia, và phải có mặt ở CẢ NĂM prompt sinh ra hoặc viết lại văn xuôi —
 // thiếu một chỗ thì stage đó lặng lẽ cắt lại đúng những từ stage trước vừa nối. Xoá luật đi không
 // làm gì đỏ: truyện vẫn ra, vẫn đúng cốt, chỉ nghe như người nước ngoài đang tập nói tiếng Việt.
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   // Cùng cái bẫy như quy tắc 2 ở trên: luật này TRỎ tới luật khác bằng TÊN, nên nếu chỉ hỏi
   // "cả WR có chứa tên đó không" thì chính câu trỏ tự thoả mãn khẳng định, và cái tên trỏ vào
   // hư không vẫn xanh. Phải hỏi một quy tắc KHÁC có mang tên đó không.
@@ -122,7 +124,7 @@ for (const p of ["WR", "EDIT", "FIXCH"] as const)
     `ngontinh ${p} demands one "tôi" inner-monologue line per scene without exempting the maleLeadInsert scene`);
 
 // Thang xưng hô: WR chỉ được dùng đúng những nấc mà SC của chính thể loại đó chào
-for (const g of [d, n])
+for (const g of [d, n, h])
   for (const r of ["mày-tao", "tôi-cô", "tôi-anh", "anh-em"])
     if (g.WR.includes(r))
       must(g.SC.includes(r), `${g.id} WR uses the pronoun register ${r} but its own SC never offers it`);
@@ -152,11 +154,13 @@ const SET_SLOTS: Record<string, Record<string, string>> = {
   // {{SET_JUDGE}} là biến DUY NHẤT nằm ở nhiều prompt: cả ba prompt chấm điểm đều phải
   // biết đang đọc thế giới nào, nếu không chúng chấm truyện Trung Quốc theo chuẩn Việt.
   drama: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", HOOK: "{{SET_PROVERB}}", FIXCH: "{{SET_FOREIGN}}", REVIEW_CH: "{{SET_JUDGE}}", REVIEW_SUM: "{{SET_JUDGE}}", CHECK: "{{SET_JUDGE}}"},
-  ngontinh: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", FIXCH: "{{SET_FOREIGN}}", REVIEW_CH: "{{SET_JUDGE}}", REVIEW_SUM: "{{SET_JUDGE}}", CHECK: "{{SET_JUDGE}}"}
+  ngontinh: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", FIXCH: "{{SET_FOREIGN}}", REVIEW_CH: "{{SET_JUDGE}}", REVIEW_SUM: "{{SET_JUDGE}}", CHECK: "{{SET_JUDGE}}"},
+  // Hồi quy cũng không có {{SET_PROVERB}}: lời mở của nó kể toẹt cốt truyện, cấm mở bằng tục ngữ.
+  hoiquy: {ARCH: "{{SET_NAMES}}", SC: "{{SET_PROP}}", WR: "{{SET_DETAIL}}", FIXCH: "{{SET_FOREIGN}}", REVIEW_CH: "{{SET_JUDGE}}", REVIEW_SUM: "{{SET_JUDGE}}", CHECK: "{{SET_JUDGE}}"}
 };
 const SET_VARS = new Set(Object.keys(settingVars("vietnam")).map(k => `{{${k}}}`));
 must(SET_VARS.size === 6, `settingVars fills ${SET_VARS.size} variables, the prompts are written against 6`);
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   const slots = SET_SLOTS[g.id];
   for (const [p, v] of Object.entries(slots))
     must((g[p as keyof typeof g] as string).includes(v),
@@ -173,7 +177,7 @@ must(!n.HOOK.includes("{{SET_PROVERB}}"), "ngontinh HOOK now carries {{SET_PROVE
 // HOOKFIX viết lại lời dẫn cho dễ nghe. Nó chạy NGOÀI pipeline sinh truyện, từ một nút
 // bấm, nên không có stage nào phía sau đỡ lỗi giúp: prompt sai là ghi đè thẳng hook.txt.
 const HOOKFIX_VARS = new Set(["{{HOOK}}", "{{BIBLE}}", "{{WORDS}}", "{{FEEDBACK}}"]);
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   for (const v of HOOKFIX_VARS)
     must(g.HOOKFIX.includes(v), `${g.id} HOOKFIX no longer carries ${v} — rewriteHook fills it, so the prompt would lose it silently`);
   // rewriteHook điền đúng ba biến trên và không điền gì khác. Biến thứ tư lọt vào đây sẽ
@@ -204,7 +208,7 @@ must(!d.HOOKFIX.includes("nữ chính"), "drama HOOKFIX has picked up the romanc
 // hứa đó thành thứ kiểm tra được.
 must(IDEA.includes("{{TRANSCRIPT}}"), "IDEA no longer receives the transcript it exists to read");
 must(IDEA.includes("{{FIDELITY}}"), "IDEA lost the fidelity slot, so every level renders the same prompt");
-for (const g of [d, n])
+for (const g of [d, n, h])
   for (const name of NAMES)
     must(!(g[name] as string).includes("{{TRANSCRIPT}}"),
       `${g.id} ${name} carries {{TRANSCRIPT}} — the source video's wording must never reach a prompt that writes prose`);
@@ -215,7 +219,7 @@ for (const level of ["loose", "frame", "tight"])
 // FIXSPAN sửa từng đoạn thay vì cả chương, để thu nhỏ bán kính nổ của một lượt sửa. Nó
 // ghi đè chương đã viết xong, nên sai ở đây đắt ngang FIXCH.
 const FIXSPAN_VARS = new Set(["{{BIBLE}}", "{{CHAPTER}}", "{{ISSUES}}", "{{TEXT}}", "{{INDEXES}}"]);
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   for (const v of FIXSPAN_VARS)
     must(g.FIXSPAN.includes(v), `${g.id} FIXSPAN no longer carries ${v} — fixStory fills it, so the prompt would lose it silently`);
   // Cùng chốt chặn như HOOKFIX: FIXSPAN cố ý KHÔNG biết bối cảnh. {{SET_FOREIGN}} là câu
@@ -254,7 +258,7 @@ must(SETTINGS.china.foreign.includes("GIỮ NGUYÊN"), "china foreign clause no 
 must(SETTINGS.china.judge !== SETTINGS.vietnam.judge, "china judge clause is a copy of vietnam's — a Chinese-set story will be marked down for not being Vietnamese");
 must(SETTINGS.china.judge.includes("KHÔNG trừ điểm"), "china judge clause no longer forbids docking points for un-Vietnamese behaviour");
 must(SETTINGS.vietnam.judge.includes("Việt Nam"), "vietnam judge clause no longer names its own setting");
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   must(!g.REVIEW_CH.includes("người Việt"), `${g.id} REVIEW_CH hardcodes "người Việt" — it will judge every setting by Vietnamese manners`);
   must(!g.REVIEW_SUM.includes("người Việt"), `${g.id} REVIEW_SUM hardcodes "người Việt"`);
   must(!g.CHECK.includes("người Việt"), `${g.id} CHECK hardcodes "người Việt"`);
@@ -262,13 +266,13 @@ for (const g of [d, n]) {
 
 // Danh sách chống lặp của mỗi thể loại phải có trần trong dedupeMemoryArrays, nếu không
 // nó lớn mãi và được nhét nguyên vào MEMORY của mọi prompt về sau.
-for (const g of [d, n])
+for (const g of [d, n, h])
   for (const k of g.usedMemoryKeys)
     must(MEMORY_CAPS[k] !== undefined,
       `${g.id} tracks ${k} in usedMemoryKeys but dedupeMemoryArrays has no cap for it — that list grows unbounded`);
 
 // actsText phải CHIA ĐÚNG 1..N thành ba hồi liền nhau, không phải chỉ trả về chuỗi khác rỗng
-for (const g of [d, n]) {
+for (const g of [d, n, h]) {
   must(g.actsText(2) === "", `${g.id} actsText should return "" below 3 chapters`);
   for (const N of [6, 12, 24]) {
     const r = [...g.actsText(N).matchAll(/Chương (\d+)-(\d+)/g)].map(m => [Number(m[1]), Number(m[2])]);
@@ -279,6 +283,65 @@ for (const g of [d, n]) {
       `${g.id} actsText(${N}) acts are not contiguous: ${JSON.stringify(r)}`);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HỒI QUY BÁO THÙ. Spine này không được nghĩ ra mà được đo ra từ bốn truyện thật, nên các
+// khẳng định dưới đây giữ đúng những chỗ nó KHÁC hai spine kia — mà cũng chính là những chỗ
+// một lượt refactor "cho đồng bộ" sẽ san phẳng trước tiên.
+must(h.defaultSetting === "china", "hoiquy defaultSetting must be china — all four reference stories are Chinese-set");
+must(h.narration === "first" && n.narration === "first" && d.narration === "third",
+  "narration axis wrong: hoiquy/ngontinh kể ngôi thứ nhất, drama ngôi thứ ba — craft.ts chỉ kiểm ngôi kể theo trường này");
+must(h.hookWords === 240 && h.outroWords === 40,
+  "hoiquy hook/outro word counts wrong — 240/40 đo từ bốn bản chuẩn: chúng mở 185-271 từ, nên trần 240+15%=276 mới ôm được cả bản dài nhất, và đóng lại bằng đúng một câu");
+
+// Không được kéo xương sống của hai thể loại kia sang
+for (const f of ["escalationLadder", "coldOpen", "antagonistWound", "tellDetail", "sweetLadder", "doubtLadder", "maleLeadSecret", "heroineWound", "happyEnding"])
+  must(!h.ARCH.includes(f), `hoiquy ARCH still asks for the bible field ${f}, which belongs to another spine`);
+for (const f of ["priorLife", "returnPoint", "debtLadder", "selfDestruct", "secondPredator", "allyTurn", "risePath", "finalLine"])
+  must(h.ARCH.includes(f), `hoiquy ARCH is missing its own bible field ${f}`);
+for (const f of ["escalationType", "pressureLevel", "antagonistInsert", "sweetBeat", "doubtBeat", "intimacyLevel", "maleLeadInsert", "swoonLine"])
+  must(!h.OUT.includes(f), `hoiquy OUT still asks for the outline field ${f}, which belongs to another spine`);
+for (const f of ["debtBeat", "evidence", "priceTag", "contrastLine", "allyShift", "payoffLevel", "retributionInsert"])
+  must(h.OUT.includes(f), `hoiquy OUT is missing its own outline field ${f}`);
+must(h.chapterCriteria.join(",") === "hook,nhipDo,showKhongTell,hoiThoai,doiChieu,giaPhaiTra", "hoiquy chapterCriteria wrong");
+
+// Công thức mở/đóng của kênh drama không được lẫn sang
+must(!h.HOOK.includes("Mời quý vị cùng lắng nghe"), "hoiquy HOOK picked up the drama channel's sign-off");
+must(!h.OUTRO.includes("Quý thính giả thân mến"), "hoiquy OUTRO opens like the drama channel");
+must(!h.HOOK.includes("{{SET_PROVERB}}"), "hoiquy HOOK carries {{SET_PROVERB}} — its opening is forbidden to start on a proverb");
+
+// Khẳng định NẶNG NHẤT của spine này. Lời mở kể TOẸT cốt truyện — kẻ kia đã làm gì, nhân vật
+// chính mất gì, tỉnh lại lúc nào — rồi mới quay lại kể. Cả bốn bản chuẩn làm y hệt, và đó
+// chính là thứ ngược hẳn bản năng "giữ bí mật cho hấp dẫn" của mọi prompt viết hook khác.
+// Xoá luật này đi thì không có gì đỏ: truyện vẫn ra, hook vẫn đọc được, chỉ là nó lặng lẽ
+// quay về kiểu úp mở mà bốn bản đã được thị trường công nhận không hề dùng.
+must(h.HOOK.includes("KỂ TOẸT LÀ ĐÚNG"), "hoiquy HOOK no longer tells the model to spoil the plot — that spoiler opening IS the genre");
+must(h.HOOK.includes("KHÔNG dùng tục ngữ") && h.HOOK.includes("KHÔNG câu hỏi tu từ"),
+  "hoiquy HOOK no longer forbids the proverb-and-rhetorical-question opening it exists to replace");
+must(h.HOOKFIX.includes("kể toẹt"), "hoiquy HOOKFIX lets the rewrite turn the spoiler opening back into a teaser");
+// Lời kết là MỘT câu, không phải bài bình luận có câu hỏi thảo luận và lời mời bình luận.
+must(h.OUTRO.includes("KHÔNG đặt câu hỏi cho người nghe") && h.OUTRO.includes("KHÔNG kêu gọi bình luận"),
+  "hoiquy OUTRO no longer forbids the discussion question and the comment CTA — that is the drama channel's formula");
+
+// Nhân vật chính không tự ra tay: đây là thứ giữ người nghe đứng về phía cô ấy suốt cả truyện,
+// và nó phải sống ở CẢ prompt viết lẫn prompt chấm, nếu không một bên sẽ hoàn tác bên kia.
+must(h.WR.includes("KHÔNG TỰ RA TAY"), "hoiquy WR lost the rule that keeps the protagonist's hands clean");
+must(h.REVIEW_CH.includes("tự ra tay"), "hoiquy REVIEW_CH no longer docks points when the protagonist does the destroying herself");
+// Đoạn chen báo ứng chỉ có ở HAI trên bốn bản chuẩn, nên nó là tuỳ chọn MỘT LẦN, không phải
+// mỗi chương một lần như antagonistInsert của drama. Rải ra nhiều chương là hết đắt.
+must(h.OUT.includes("CẢ TRUYỆN CHỈ CÓ ĐÚNG MỘT ĐOẠN NÀY"), "hoiquy OUT no longer caps retributionInsert at one per story");
+must(h.OUT.includes("LUÔN LUÔN là nhân vật chính"), "hoiquy OUT no longer pins povCharacter to the narrator");
+
+// Mỗi prompt phải tự khai đang đọc thể loại nào, y như hai spine kia
+for (const p of NAMES)
+  must(!(h[p] as string).includes("truyện drama") && !(h[p] as string).includes("ngôn tình"),
+    `hoiquy ${p} tells the model it is reading another genre`);
+for (const p of ["CHECK", "REVIEW_CH", "REVIEW_SUM", "EDIT", "FIXCH", "FIXVERIFY"] as const)
+  must((h[p] as string).includes("hồi quy"), `hoiquy ${p} never tells the judge which genre it is reading`);
+must(h.FIXVERIFY.includes("truyện hồi quy báo thù tiếng Việt"), "hoiquy FIXVERIFY does not name its own genre");
+// Trường nào ARCH đòi thì phải có nơi tiêu thụ, nếu không nó chỉ tốn token
+must(h.OUT.includes("selfDestruct.collapseChapter"), "hoiquy asks ARCH for selfDestruct but OUT never places its collapse chapter");
+must(h.OUTRO.includes("finalLine"), "hoiquy asks ARCH for finalLine but nothing ever speaks it");
 
 if (fails.length) { console.error(fails.map(f => `FAIL ${f}`).join("\n")); process.exit(1); }
 console.log(`all genre prompt invariants OK (${GENRES.length} genres)`);

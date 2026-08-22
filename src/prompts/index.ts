@@ -1,7 +1,7 @@
-import type{GenreId,SettingId}from"../types.js";import type{GenrePrompts}from"./core.js";import{DRAMA}from"./drama.js";import{NGONTINH}from"./ngontinh.js";
+import type{GenreId,SettingId}from"../types.js";import type{GenrePrompts}from"./core.js";import{DRAMA}from"./drama.js";import{NGONTINH}from"./ngontinh.js";import{HOIQUY}from"./hoiquy.js";
 export{P,IDEA,FIDELITY}from"./core.js";export type{GenrePrompts}from"./core.js";
 export{SETTINGS,settingVars,SETTINGS_LIST}from"./settings.js";export type{SettingPack}from"./settings.js";
-const ALL:Record<GenreId,GenrePrompts>={drama:DRAMA,ngontinh:NGONTINH};
-export const GENRES:{id:GenreId;label:string}[]=[{id:"drama",label:DRAMA.label},{id:"ngontinh",label:NGONTINH.label}];
+const ALL:Record<GenreId,GenrePrompts>={drama:DRAMA,ngontinh:NGONTINH,hoiquy:HOIQUY};
+export const GENRES:{id:GenreId;label:string}[]=[{id:"drama",label:DRAMA.label},{id:"ngontinh",label:NGONTINH.label},{id:"hoiquy",label:HOIQUY.label}];
 export function getGenre(id?:string):GenrePrompts{return(id&&(ALL as any)[id])||ALL.drama}
 export const resolveSetting=(genre:string|undefined,setting:string|undefined):SettingId=>setting==="vietnam"||setting==="china"?setting:getGenre(genre).defaultSetting;

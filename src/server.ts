@@ -200,7 +200,7 @@ app.get("/api/config", async (req, res) => {
     targetWordsPerMinute: c.targetWordsPerMinute,
     silenceGapMs: c.tts.silenceGapMs,
     genre: c.genre,
-    genres: GENRES,
+    genres: GENRES.map(g => ({...g, defaults: getGenre(g.id).defaults ?? null})),
     setting: c.setting,
     settings: SETTINGS_LIST
   });
@@ -391,11 +391,15 @@ async function queueGenerateJob(input: any): Promise<QueueResult> {
   const settingsOverrides = await loadSettingsOverrides();
   const baseConfig = { ...config, ...settingsOverrides };
   maxParallelStories = baseConfig.maxParallelStories;
+  // Thể loại tự khai hình dạng truyện của nó (hồi quy: 33 phút, 4 chương) thì con số đó
+  // thắng cấu hình chung khi request để trống — nếu không, thể loại đo theo dải 8.000 từ sẽ
+  // ra truyện 14.400 từ và bị chính dải chuẩn của nó ghi lỗi ngay lần chấm đầu tiên.
+  const shape = getGenre((resumedGenre || input.genre || baseConfig.genre) as string).defaults;
   const jobConfig: Config = {
     ...baseConfig,
-    chapters: input.chapters ? Number(input.chapters) : baseConfig.chapters,
-    scenesPerChapter: input.scenesPerChapter ? Number(input.scenesPerChapter) : baseConfig.scenesPerChapter,
-    durationMinutes: input.durationMinutes ? Number(input.durationMinutes) : baseConfig.durationMinutes,
+    chapters: input.chapters ? Number(input.chapters) : (shape?.chapters ?? baseConfig.chapters),
+    scenesPerChapter: input.scenesPerChapter ? Number(input.scenesPerChapter) : (shape?.scenesPerChapter ?? baseConfig.scenesPerChapter),
+    durationMinutes: input.durationMinutes ? Number(input.durationMinutes) : (shape?.durationMinutes ?? baseConfig.durationMinutes),
     genre: (resumedGenre || input.genre || baseConfig.genre) as GenreId,
     setting: (resumedSetting || input.setting || baseConfig.setting) as SettingId | "auto"
   };

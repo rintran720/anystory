@@ -8,8 +8,13 @@ import {cleanGeneratedStory} from "../src/utils.js";
 const genreId = process.argv[2] ?? "drama";
 const pr = getGenre(genreId);
 if (pr.id !== genreId) { console.error(`Unknown genre: ${genreId}`); process.exit(1); }
-const ideaFile = genreId === "ngontinh" ? "stories/example-ngontinh/idea.txt" : "stories/example/idea.txt";
-const c = {...config, ...await loadSettingsOverrides(), chapters: 6, genre: pr.id};
+const IDEA_FILES: Record<string, string> = {ngontinh: "stories/example-ngontinh/idea.txt", hoiquy: "stories/example-hoiquy/idea.txt"};
+// Thiếu một nhánh ở đây thì thể loại mới bị smoke-test bằng ý tưởng của DRAMA và đọc ra
+// như thể ARCH của chính nó hỏng - lỗi im lặng, tốn một lượt gọi để hiểu nhầm.
+const ideaFile = IDEA_FILES[genreId] ?? "stories/example/idea.txt";
+// Hình dạng truyện của chính thể loại (hồi quy: 33 phút, 4 chương) thắng cấu hình chung,
+// y như server làm — nếu không, bản smoke đo ra một truyện dài gấp đôi thể loại nhắm tới.
+const c = {...config, ...await loadSettingsOverrides(), chapters: 6, ...(pr.defaults ?? {}), genre: pr.id};
 const sid = resolveSetting(c.genre, c.setting);
 const sv = settingVars(sid);
 const out = path.resolve("output", `_smoke-${pr.id}`);
@@ -33,22 +38,25 @@ for (const [k, v] of chapterFields)
 bible.genreId = pr.id;
 bible.settingId = sid;
 await fs.writeFile(path.join(out, "story_bible.json"), JSON.stringify(bible, null, 2));
-console.log("coldOpen:", JSON.stringify(bible.coldOpen, null, 1));
-console.log("tellDetail:", JSON.stringify(bible.tellDetail, null, 1));
-console.log("secondPredator:", JSON.stringify(bible.secondPredator, null, 1));
-console.log("truthWitness:", JSON.stringify(bible.truthWitness, null, 1));
-console.log("ledger:", JSON.stringify(bible.ledger, null, 1));
-console.log("sweetLadder:", JSON.stringify(bible.sweetLadder, null, 1));
-console.log("doubtLadder:", JSON.stringify(bible.doubtLadder, null, 1));
-console.log("heroineWound:", JSON.stringify(bible.heroineWound, null, 1));
-console.log("maleLeadSecret:", JSON.stringify(bible.maleLeadSecret, null, 1));
+// In trường craft của CHÍNH spine đang chạy. Danh sách cứng của drama+ngôn tình sẽ đổ ra
+// một loạt "undefined" cho thể loại thứ ba và đọc như thể ARCH của nó hỏng.
+const PLAIN = new Set(["title", "genre", "theme", "premise", "tone", "characters", "setting",
+  "mainConflict", "secondaryConflicts", "titleCandidates", "genreId", "settingId"]);
+for (const [k, v] of Object.entries(bible))
+  if (!PLAIN.has(k)) console.log(`${k}:`, JSON.stringify(v, null, 1));
 
 console.log("\nOUT...");
 const words = c.durationMinutes * c.targetWordsPerMinute;
 const outline: any = await askJSON(c, P(pr.OUT, {...sv, CHAPTERS: String(c.chapters), WORDS: String(words), ACTS: pr.actsText(c.chapters), BIBLE: JSON.stringify(bible)}), .4, 3, x => validateOutline(x, c.chapters));
 await fs.writeFile(path.join(out, "outline.json"), JSON.stringify(outline, null, 2));
-for (const ch of outline.chapters)
-  console.log(`ch${ch.chapter} irony="${ch.dramaticIrony}" | swoon="${String(ch.swoonLine ?? "-").slice(0, 60)}" | insert="${String(ch.antagonistInsert ?? ch.maleLeadInsert).slice(0, 70)}" | cliff="${String(ch.cliffhanger).slice(0, 60)}"`);
+// Cùng lý do: mỗi spine có tên trường riêng, in theo tên cứng là in ra "undefined".
+const OUTLINE_PLAIN = new Set(["chapter", "title", "purpose", "conflict", "emotionalState",
+  "reveal", "climax", "estimatedWords", "povCharacter"]);
+for (const ch of outline.chapters) {
+  const extra = Object.entries(ch).filter(([k]) => !OUTLINE_PLAIN.has(k))
+    .map(([k, v]) => `${k}="${(typeof v === "object" && v ? JSON.stringify(v) : String(v ?? "-")).slice(0, 55)}"`).join(" | ");
+  console.log(`ch${ch.chapter} ${extra}`);
+}
 
 console.log("\nHOOK...");
 const hook = cleanGeneratedStory(await retryLLM(c, P(pr.HOOK, {...sv, WORDS: String(pr.hookWords), BIBLE: JSON.stringify(bible), OUTLINE: JSON.stringify(outline)}), {temperature: .7, think: false}, 3, "Hook"));
