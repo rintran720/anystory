@@ -56,7 +56,8 @@ QUY TẮC BẮT BUỘC:
 9. CÂU BÁO TRƯỚC: được viết TỐI ĐA MỘT câu mỗi cảnh, dạng người kể nói trước một mất mát mà nhân vật chưa biết, luôn neo vào MỘT VẬT hoặc MỘT HÀNH ĐỘNG vừa xuất hiện trong cảnh — ví dụ "Bà không biết chén trà đó là chén trà cuối cùng đứa con dâu rót cho bà", "Ông không biết đó là lần cuối ông còn tự tay mở cái hộp ấy ra". Chỉ được nói MẤT GÌ, tuyệt đối không nói mất bằng cách nào, do ai, hay chuyện gì xảy ra sau đó. Không dùng câu này ở cảnh không có gì để mất.
 10. CON SỐ CỤ THỂ: mọi khoản tiền, tuổi tác, giờ giấc, khoảng cách phải là con số cụ thể lấy đúng từ ledger trong BIBLE và timeline trong MEMORY, không được viết "một số tiền lớn", "nhiều năm trước", "khuya lắm rồi". Nếu cảnh phát sinh con số mới thì chọn số lẻ, đời thường (bảy mươi mốt triệu, hai giờ mười lăm) chứ không phải số tròn trịa.
 11. CÂU NGẮN CHO GIỌNG ĐỌC: phần lớn câu dưới 20 chữ. Khi kịch tính lên đỉnh, viết chuỗi câu rất ngắn cùng chủ ngữ ("Bà ngồi xuống. Bà mở tủ. Bà kéo cái hũ ra."). Không viết câu ghép nhiều mệnh đề lồng nhau; người nghe không tua lại được.
-12. NHỊP KẾT CẢNH: nếu cảnh vừa xong một cú đau, kết bằng MỘT câu tả sự vật dửng dưng bên ngoài (gió, con thằn lằn, đồng hồ điểm giờ, một cành lá rụng) rồi dừng, không bình luận thêm.
+12. TỪ PHẢI ĐỦ CHỮ, DÙNG TỪ LÁY: tiếng Việt đời thường nói bằng từ hai tiếng. Viết "một nét gọn gàng" chứ không phải "một nét gọn", "không trọn vẹn" chứ không phải "không trọn", "giọng dịu dàng" chứ không phải "giọng dịu". Luật CÂU NGẮN CHO GIỌNG ĐỌC nói về CÂU, không nói về TỪ: muốn ngắn thì bỏ mệnh đề thừa, tuyệt đối không cắt cụt ở giữa một từ — cắt như vậy chẳng tiết kiệm được mấy chữ mà nghe như người nước ngoài đang tập nói tiếng Việt. Tả dáng vẻ, cử chỉ và tiếng động thì ưu tiên từ láy đời thường (rón rén, lụi cụi, tần ngần, hớt hải, lẩm bẩm, run rẩy, thủng thẳng) thay cho tính từ trần trụi.
+13. NHỊP KẾT CẢNH: nếu cảnh vừa xong một cú đau, kết bằng MỘT câu tả sự vật dửng dưng bên ngoài (gió, con thằn lằn, đồng hồ điểm giờ, một cành lá rụng) rồi dừng, không bình luận thêm.
 OUTPUT là văn bản truyện thuần túy. Câu đầu tiên bắt đầu trực tiếp bằng nội dung. TUYỆT ĐỐI KHÔNG viết "Dưới đây là", "Đây là phiên bản", "Sau đây là", "Tôi đã chỉnh sửa". Không Markdown: không #, **, *, _, bullet, code block, blockquote, stage directions, "Narrator:", "Dialogue:", "Scene:", "Chapter:". BIBLE:
 <BIBLE>
 CHAPTER:
@@ -89,6 +90,7 @@ NGUYÊN TẮC BẤT DI BẤT DỊCH: giữ nguyên mọi tình tiết, vai vế,
 NÓI CHO DỄ HIỂU MÀ VẪN MƯỢT — ĐÂY LÀ VIỆC CHÍNH:
 - Từ đời thường trước. Có từ thuần Việt thay được thì đừng dùng từ Hán-Việt văn vẻ: "nghiệt ngã" thành "cay đắng", "an bài" thành "sắp đặt sẵn", "cơ hàn" thành "nghèo".
 - Câu dài rối thì VIẾT LẠI CHO GỌN, TUYỆT ĐỐI KHÔNG chặt làm đôi. Mỗi câu phải đứng được một mình, đủ chủ ngữ và vị ngữ. Không để lại mảnh cụt kiểu "Bước vào lễ đường in tên chị." — đó là mẩu vụn, không phải câu.
+- Từ phải đủ chữ: rút gọn ở mệnh đề thừa, KHÔNG rút ở giữa một từ. "một nét gọn gàng" chứ không phải "một nét gọn", "không trọn vẹn" chứ không phải "không trọn". Từ láy đời thường (rón rén, tần ngần, lụi cụi, hớt hải) là tiếng Việt dễ nghe chứ không phải chữ hoa mỹ — luật xoá chữ hoa mỹ bên dưới không đụng tới chúng.
 - Nhịp phải xen kẽ: câu vừa để kể, câu ngắn để nhấn. Ba bốn câu ngắn liên tiếp nghe như đọc gạch đầu dòng chứ không phải kể chuyện. Nối ý bằng từ nối đời thường (rồi, mà, nhưng, vì, thế là) thay vì chấm câu liên tục.
 - Câu quá 25 chữ thường là dấu hiệu rối: gỡ mệnh đề lồng nhau ra, đừng chồng ba ý vào một câu.
 - Thay danh từ trừu tượng bằng thứ nhìn thấy được: đừng nói "bi kịch gia đình", hãy nói "mâm cơm không ai đụng đũa".
@@ -138,6 +140,7 @@ VIỆC PHẢI LÀM:
 3. XƯNG HÔ: kiểm tra xưng hô nhất quán trong từng cảnh và khớp nhiệt độ quan hệ, chỉ đổi khi quan hệ thực sự đổi.
 4. TIMELINE: sửa mọi con số tuổi hoặc mốc thời gian mâu thuẫn với timeline trong MEMORY, lấy MEMORY làm chuẩn.
 5. Cắt câu thừa nhưng KHÔNG cắt tình tiết và KHÔNG rút ngắn quá 15% độ dài bản nháp.
+6. TỪ ĐỦ CHỮ: nối lại những từ bị cắt cụt còn một tiếng — "một nét gọn" thành "một nét gọn gàng", "không trọn" thành "không trọn vẹn". Chỗ nào đang dùng tính từ trần trụi để tả dáng vẻ hay cử chỉ thì thay bằng từ láy đời thường (rón rén, tần ngần, lụi cụi, hớt hải). Đây là việc THÊM chữ; không được nhân đó cắt tình tiết cho bù lại độ dài.
 Output bắt đầu trực tiếp bằng câu chuyện. Không meta, không Markdown, không "Dưới đây là", "Đây là phiên bản", "Tôi đã chỉnh sửa". BIBLE:
 <BIBLE>
 MEMORY:
@@ -208,6 +211,7 @@ BẮT BUỘC THÊM:
 - Câu cuối chương phải là sự kiện vật lý hoặc câu thoại đúng như cliffhanger trong OUTLINE, và KHÔNG được có bất kỳ câu tả cảnh nào sau nó.
 - Xưng hô phải đúng quan hệ trong BIBLE và giữ nhất quán suốt chương.
 - Mọi câu tiếng Việt phải tự nhiên, đúng nghĩa, đúng chính tả; <SET_FOREIGN>.
+- Từ phải đủ chữ: không để từ bị cắt cụt còn một tiếng ("một nét gọn" phải là "một nét gọn gàng", "không trọn" phải là "không trọn vẹn"), và ưu tiên từ láy đời thường khi tả dáng vẻ hay cử chỉ.
 - Độ dài bản sửa không được ngắn hơn 85% bản gốc.
 Output bắt đầu trực tiếp bằng câu chuyện. Không meta, không Markdown, không "Dưới đây là", không liệt kê những gì đã sửa. BIBLE:
 <BIBLE>
@@ -229,6 +233,7 @@ MỘT ĐỔI MỘT: mỗi đoạn được đánh dấu trả về ĐÚNG MỘT 
 NÓI CHO DỄ HIỂU MÀ VẪN MƯỢT — ĐÂY LÀ VIỆC CHÍNH:
 - Từ đời thường trước. Có từ thuần Việt thay được thì đừng dùng từ Hán-Việt văn vẻ: "nghiệt ngã" thành "cay đắng", "an bài" thành "sắp đặt sẵn", "cơ hàn" thành "nghèo".
 - Câu dài rối thì VIẾT LẠI CHO GỌN, TUYỆT ĐỐI KHÔNG chặt làm đôi. Mỗi câu phải đứng được một mình, đủ chủ ngữ và vị ngữ. Không để lại mảnh cụt kiểu "Bước vào lễ đường in tên chị." — đó là mẩu vụn, không phải câu.
+- Từ phải đủ chữ: rút gọn ở mệnh đề thừa, KHÔNG rút ở giữa một từ. "một nét gọn gàng" chứ không phải "một nét gọn", "không trọn vẹn" chứ không phải "không trọn". Từ láy đời thường (rón rén, tần ngần, lụi cụi, hớt hải) là tiếng Việt dễ nghe chứ không phải chữ hoa mỹ — luật xoá chữ hoa mỹ bên dưới không đụng tới chúng.
 - Nhịp phải xen kẽ: câu vừa để kể, câu ngắn để nhấn. Ba bốn câu ngắn liên tiếp nghe như đọc gạch đầu dòng chứ không phải kể chuyện. Nối ý bằng từ nối đời thường (rồi, mà, nhưng, vì, thế là) thay vì chấm câu liên tục.
 - Câu quá 25 chữ thường là dấu hiệu rối: gỡ mệnh đề lồng nhau ra, đừng chồng ba ý vào một câu.
 - Thay danh từ trừu tượng bằng thứ nhìn thấy được: đừng nói "bi kịch gia đình", hãy nói "mâm cơm không ai đụng đũa".

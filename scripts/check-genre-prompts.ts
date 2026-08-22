@@ -68,8 +68,8 @@ const wrRules = (s: string) => s.split("\n").filter(l => /^\d+\. /.test(l));
 
 // WR là chữ ký của thể loại: số quy tắc, quy tắc riêng, và quy tắc của thể loại kia
 must(d.WR !== n.WR, "the two genres share the same WR verbatim — the romance spine is not writing its own scenes");
-must(wrRules(d.WR).length === 12, `drama WR should render 12 numbered rules, has ${wrRules(d.WR).length}`);
-must(wrRules(n.WR).length === 15, `ngontinh WR should render 15 numbered rules, has ${wrRules(n.WR).length}`);
+must(wrRules(d.WR).length === 13, `drama WR should render 13 numbered rules, has ${wrRules(d.WR).length}`);
+must(wrRules(n.WR).length === 16, `ngontinh WR should render 16 numbered rules, has ${wrRules(n.WR).length}`);
 for (const r of ["NGÔI KỂ:", "NỘI TÂM TỰ TRÀO:", "CÂU THOẠI SÁT THƯƠNG:", "ĐIỆP CẤU TRÚC:", "KHÔNG BẠO LỰC:"]) {
   must(n.WR.includes(r), `ngontinh WR is missing its own rule ${r}`);
   must(!d.WR.includes(r), `drama WR carries the romance-only rule ${r}`);
@@ -87,6 +87,26 @@ for (const g of [d, n]) {
     const target = wrRules(g.WR)[Number(m[2]) - 1] ?? "";
     must(target.toLowerCase().includes(m[1].toLowerCase()),
       `${g.id} WR rule 2 names "${m[1]}" at rule ${m[2]}, but rule ${m[2]} is "${target.slice(0, 48)}…"`);
+  }
+}
+
+// Từ bị cắt cụt còn một tiếng ("một nét gọn" thay cho "một nét gọn gàng", "không trọn" thay cho
+// "không trọn vẹn") là lỗi người nghe bắt được bằng tai, và nó do chính luật CÂU NGẮN CHO GIỌNG ĐỌC
+// đẩy ra: model tiết kiệm chữ ở SAI TẦNG, cắt trong lòng một từ thay vì bỏ mệnh đề thừa. Nên luật
+// mới phải gọi đích danh luật kia, và phải có mặt ở CẢ NĂM prompt sinh ra hoặc viết lại văn xuôi —
+// thiếu một chỗ thì stage đó lặng lẽ cắt lại đúng những từ stage trước vừa nối. Xoá luật đi không
+// làm gì đỏ: truyện vẫn ra, vẫn đúng cốt, chỉ nghe như người nước ngoài đang tập nói tiếng Việt.
+for (const g of [d, n]) {
+  // Cùng cái bẫy như quy tắc 2 ở trên: luật này TRỎ tới luật khác bằng TÊN, nên nếu chỉ hỏi
+  // "cả WR có chứa tên đó không" thì chính câu trỏ tự thoả mãn khẳng định, và cái tên trỏ vào
+  // hư không vẫn xanh. Phải hỏi một quy tắc KHÁC có mang tên đó không.
+  const rules = wrRules(g.WR), namer = rules.findIndex(r => r.includes("TỪ PHẢI ĐỦ CHỮ"));
+  must(namer >= 0, `${g.id} WR lost the TỪ PHẢI ĐỦ CHỮ rule`);
+  must(rules.some((r, i) => i !== namer && r.includes("CÂU NGẮN CHO GIỌNG ĐỌC")),
+    `${g.id} WR rule TỪ PHẢI ĐỦ CHỮ defers to "CÂU NGẮN CHO GIỌNG ĐỌC", but no other rule carries that heading`);
+  for (const p of ["WR", "EDIT", "FIXCH", "FIXSPAN", "HOOKFIX"] as const) {
+    must((g[p] as string).includes("một nét gọn gàng"), `${g.id} ${p} no longer stops words being clipped to one syllable`);
+    must((g[p] as string).toLowerCase().includes("từ láy"), `${g.id} ${p} no longer asks for reduplicative words`);
   }
 }
 
